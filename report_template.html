@@ -149,7 +149,7 @@ details.defs dt { color: var(--subtitle); margin-top: 8px; } details.defs dd { m
 .guide-more { display: none; }
 .cols { display: flex; flex-direction: column; }
 .col-app, .col-ins { display: contents; }         /* narrow: one column, Insights right after the summary card */
-.cols .info { order: 1; } .cols #insights { order: 2; } .cols > div > * { order: 3; } .cols .info { order: 1; } .cols #insights { order: 2; }
+.cols > div > * { order: 3; } .cols .info { order: 1; } .cols .ask, .cols #insights { order: 2; }
 @media (min-width: 1080px) {
   main, .topbar-in { max-width: 1240px; }
   .chart-row { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 30px; align-items: start; }
@@ -169,7 +169,7 @@ details.defs dt { color: var(--subtitle); margin-top: 8px; } details.defs dd { m
   /* rows: the tall Insights column spans both; 'auto 1fr' lets its extra height fall into row 2, not between the left cards */
   .col-app, .col-ins { display: block; min-width: 0; }
   .col-app { grid-column: 1; } .col-ins { grid-column: 2; grid-row: 1 / span 2; }
-  .col-ins .ins-head { margin-top: 0; }
+  .col-ins .ins-head { margin-top: 6px; }
   .disclaimer { max-width: 760px; margin: 10px auto 0; text-align: center; }
 }
 @media (max-width: 380px) { .tiles { grid-template-columns: 1fr; } }
@@ -240,6 +240,7 @@ details.defs dt { color: var(--subtitle); margin-top: 8px; } details.defs dd { m
 
 
   </div><div class="col-ins">
+<!--ASK-->
   <section id="insights" hidden>
     <div class="ins-head"><h3>Insights</h3><a id="trendsLink" href="#" hidden>All nights &amp; trends →</a></div>
     <p class="ins-sub" id="insSub"></p>
@@ -318,6 +319,7 @@ details.defs dt { color: var(--subtitle); margin-top: 8px; } details.defs dd { m
 
 <script>
 const R = /*REPORT_DATA*/null;
+window.ASK_CTX = { ask: R.ask, session_id: R.id ?? null };   // read by the Ask panel (ask_panel.html)
 
 const $ = id => document.getElementById(id);
 const start = new Date(R.start), end = new Date(R.end);

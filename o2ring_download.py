@@ -188,6 +188,21 @@ def parse_file(raw: bytes) -> dict:
     }
 
 
+def nudge_report_server():
+    """Best effort: if the report server is running with Ask enabled, let it write the new nights' summaries now."""
+    import os
+    import urllib.request
+    url = f"http://127.0.0.1:{os.environ.get('PORT', '3000')}/api/summaries/pending"
+    try:
+        req = urllib.request.Request(url, data=b"{}", method="POST", headers={"Content-Type": "application/json"})
+        with urllib.request.urlopen(req, timeout=3) as res:
+            started = json.load(res).get("started", 0)
+        if started:
+            print(f"Report server is writing {started} morning summar{'y' if started == 1 else 'ies'}.")
+    except Exception:
+        pass  # server not running, or Ask is off - nothing to do
+
+
 async def find_device(timeout: float):
     print(f"Scanning {timeout:.0f}s for an O2Ring (wear it so it powers on)...")
     found = await BleakScanner.discover(timeout=timeout, return_adv=True)
@@ -238,6 +253,7 @@ async def main():
             print(json.dumps(info, indent=2))
             return
 
+        stored_new = False
         args.out.mkdir(parents=True, exist_ok=True)
         (args.out / "device_info.json").write_text(json.dumps(info, indent=2))
         if db:
@@ -273,7 +289,10 @@ async def main():
             (args.out / f"{name}.json").write_text(json.dumps(summary, indent=2))
             if db:
                 new = o2ring_db.store_session(db, info.get("SN"), name, rec, raw)
+                stored_new = stored_new or new
                 print(f"  database: {'stored' if new else 'already present'}")
+        if db and stored_new:
+            nudge_report_server()
             print(f"  start {rec['start']}  {rec['recording_s']}s  "
                   f"avg SpO2 {rec['avg_spo2']}  min {rec['min_spo2']}  "
                   f"{len(rec['samples'])} samples")

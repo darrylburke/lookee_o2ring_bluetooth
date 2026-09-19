@@ -224,7 +224,9 @@ def main():
 
     source = ([demo_session()] if args.demo else sessions_from_files(args.from_files, args.session) if args.from_files
               else sessions_from_db(args.session))
-    template = TEMPLATE.read_text().replace("<!--FOOTER-->", footer_html())
+    # static pages get the Ask panel too: greyed out, with a note that it needs the report server
+    template = (TEMPLATE.read_text().replace("<!--FOOTER-->", footer_html())
+                .replace("<!--ASK-->", (HERE / "ask_panel.html").read_text()))
     args.out.mkdir(parents=True, exist_ok=True)
     reports = []
     for sess, samples, device, info in source:

@@ -114,6 +114,60 @@ npm start                            # http://127.0.0.1:3000
   O2RING_PYTHON=/path/to/lookee_o2ring_bluetooth/.venv/bin/python npm start
   ```
 
+### Optional: the Ask panel
+
+The start page, the Trends page and every report show an **Ask** panel that is
+greyed out until you give the server an Anthropic API key:
+
+1. Create a key at <https://console.anthropic.com/> (Settings → API keys). Usage
+   is billed to your Anthropic account.
+2. Add it to `.env`: `ANTHROPIC_API_KEY=sk-ant-…`
+3. Restart the server.
+
+If the panel stays grey, click it: the popup also points out a misspelt variable
+name (it must be exactly `ANTHROPIC_API_KEY`).
+
+`.env.example` lists the other settings (`O2RING_LLM_MODEL`,
+`O2RING_LLM_SEND_NOTES=0`, `O2RING_LLM_DAILY_LIMIT`). Asking sends the figures
+the model looks up to Anthropic's API – the README's *Asking questions* section
+spells out what, and what is never sent. The server creates its two conversation
+tables on start-up.
+
+#### Optional: the read-only SQL tool
+
+With `O2RING_LLM_SQL=1` the model may also write its own `SELECT` statements.
+It must run through a MySQL user that can only read. As MySQL root
+(`sudo mysql`):
+
+```sql
+CREATE USER 'lookee_ro'@'localhost' IDENTIFIED BY 'choose-another-password';
+GRANT SELECT ON lookee_data.samples         TO 'lookee_ro'@'localhost';
+GRANT SELECT ON lookee_data.session_metrics TO 'lookee_ro'@'localhost';
+GRANT SELECT ON lookee_data.desat_events    TO 'lookee_ro'@'localhost';
+GRANT SELECT ON lookee_data.tags            TO 'lookee_ro'@'localhost';
+GRANT SELECT ON lookee_data.session_tags    TO 'lookee_ro'@'localhost';
+-- sessions: everything except the ring's serial number (device_sn) and the raw file
+GRANT SELECT (id, file_name, start_time, end_time, recording_s, gap_s, asleep_s, avg_spo2, min_spo2,
+              drops_3pct, drops_4pct, seconds_below_90, drops_below_90, o2_score, steps, sample_count,
+              notes, hidden, is_combined, merged_into)
+      ON lookee_data.sessions TO 'lookee_ro'@'localhost';
+```
+
+Leave `notes` out of the last statement if you do not want the model to read
+your notes. Then add to `.env` and restart:
+
+```
+O2RING_LLM_SQL=1
+O2RING_DB_RO_USER=lookee_ro
+O2RING_DB_RO_PASSWORD=choose-another-password
+```
+
+The server log says `Ask: read-only SQL tool enabled` – or why it stayed off.
+It refuses the normal database user, a user with any privilege beyond `SELECT`
+on this one database (`SELECT ON *.*` counts), and a user that turns out to be
+able to read the serial number, the raw files, the `devices` table or your
+stored conversations – or your notes, if `O2RING_LLM_SEND_NOTES=0`.
+
 ### Run it in the background (systemd user service)
 
 `~/.config/systemd/user/o2ring-reports.service`:
@@ -175,6 +229,9 @@ Restart the server afterwards.
 | `Access denied for user …` (1045) | Wrong password in `.env` – or MySQL runs with `skip_name_resolve`, in which case create the user as `'lookee'@'127.0.0.1'` (the tools connect over TCP to `127.0.0.1`). |
 | `You have an error in your SQL syntax … AS new` | MySQL older than 8.0.19, or MariaDB. |
 | `host "…" is not allowed` (403) | You opened the server under a name it does not know – add it to `O2RING_ALLOWED_HOSTS` (step 4). |
+| Ask panel is greyed out | No `ANTHROPIC_API_KEY` in `.env` (or the server was not restarted after adding it). Click the panel for the steps. On a saved report *file* it is always off – open the report from the server. |
+| Log says `Ask: SQL tool is off – …` | The reason follows in the message: no read-only user configured, the user can do more than `SELECT`, or its login failed. |
+| Ask: "Anthropic rejected the API key" / "model was not found" | Check the key, and that `O2RING_LLM_MODEL` names a model your key can use. |
 | Report shows no Insights section | The night has not been analysed: `./o2ring_db.py --reanalyze`. |
 | Combine works but the new night has no Insights; server log says `analytics failed` | The server could not run the Python analytics – set `O2RING_PYTHON` (step 4). |
 | Times look shifted | Recordings carry the ring's wall-clock time with no time zone. The clock is set from the computer at each connection; after travelling, connect once before the night. |

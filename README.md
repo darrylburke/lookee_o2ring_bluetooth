@@ -14,6 +14,10 @@ shows.
 - 📈 **Trends** – multi-night medians, personal baseline, tag comparisons
 - 🧩 **Housekeeping** – combine a night the ring split into several files, hide
   test recordings
+- 💬 **Ask** *(optional)* – put a question to your data in plain English; Claude
+  looks the numbers up through read-only tools and the answer streams in. Each
+  night also gets a one-paragraph **morning summary**. Off, and greyed out with
+  instructions, until you add your own Anthropic API key
 
 > **Not a medical device and not a diagnosis.** This is a personal wellness tool
 > built on a consumer oximeter that is accurate to roughly ±2–3 % SpO2. It is not
@@ -24,19 +28,26 @@ shows.
 
 ![Report: oxygen, pulse and movement charts with guides](docs/img/report.png)
 
-**Summary and Insights** – the app's summary (with its ODI rows filled in) next to this project's own analysis:
+**Summary, morning summary, Ask and Insights** – the app's summary (with its ODI rows filled in) next to this project's own analysis:
 
-![Summary, distributions and Insights](docs/img/insights.png)
+![Summary, distributions, morning summary, Ask panel and Insights](docs/img/insights.png)
 
-**Trends** across nights:
+**Trends** across nights, with the all-nights Ask panel on top:
 
 ![Trends](docs/img/trends.png)
 
-| Sessions list – combine, split, hide | The same report on a phone |
+**Ask** – questions in plain English, answered from your own database. Under each answer, what the model looked at:
+
+| A conversation about one night | Until you add an API key |
+|---|---|
+| ![Morning summary and an Ask conversation](docs/img/ask.png) | ![The Ask panel greyed out](docs/img/ask-off.png)<br><br>![Popup explaining how to switch Ask on and what is sent](docs/img/ask-enable.png) |
+
+| Sessions list – combine, split, hide, ask about all nights | The same report on a phone |
 |---|---|
 | ![Sessions](docs/img/sessions.png) | ![Phone layout](docs/img/phone.png) |
 
-*All screenshots show synthetic data (`./o2ring_report.py --demo`).*
+*All screenshots show synthetic data (`./o2ring_report.py --demo` plus made-up nights). The summary and the answers in
+them are real model output – about those synthetic nights.*
 
 ## Quick start
 
@@ -71,6 +82,9 @@ cd server && npm install && npm start     # http://127.0.0.1:3000
                                                      │
         o2ring_report.py ──▶ reports/*.html  ◀───────┤      (static, self-contained pages)
         server/ (Node.js) ──▶ http://127.0.0.1:3000 ◀┘      (live reports, notes, tags, trends, combine/hide)
+                 │
+                 └─ optional ──▶ Anthropic API               (Ask panel + morning summaries; only with your key,
+                                                              only what the read-only tools return for a question)
 ```
 
 ### 1. Talking to the ring
@@ -97,6 +111,7 @@ arrive as several files) are in **[docs/PROTOCOL.md](docs/PROTOCOL.md)**.
 | `session_metrics` | headline analytics per night as columns, everything else as JSON |
 | `desat_events` | every oxygen drop: start / nadir / end, depth, length, area, pulse rise, movement, class |
 | `tags`, `session_tags` | what was different that night |
+| `ask_conversations`, `ask_messages`, `night_summaries` | your questions, the answers (with what was looked at) and the morning summaries – only if you use Ask |
 
 Tables are created and migrated automatically. Re-running any import is safe:
 sessions are unique per ring + file name.
@@ -141,6 +156,54 @@ stages, AF detection, an "AHI estimate".
 The report layout, colours and the app-side maths follow the app so that the
 numbers match it exactly; all wording, and the Insights, are this project's own.
 
+### 5. Asking questions (optional)
+
+Everything above runs entirely on your machine. The **Ask** panel – on the
+start page and the Trends page for questions about all your nights, and on each
+report for questions about that night – is the one exception, and it stays greyed out – with a popup
+explaining how to enable it – until `ANTHROPIC_API_KEY` is set in `.env`.
+
+- **Morning summary.** Each night also gets one short paragraph at the top of
+  its report – written once from that night's numbers, stored in MySQL
+  (`night_summaries`), rewritten only if the analysis behind it changes or you
+  press *Write again*. The downloader nudges a running server so it is ready
+  before you open the report.
+- **How it answers.** Answers stream in as they are written. The model never sees
+  a data dump. It gets five read-only tools (`server/ask-tools.js`): list nights, one night's full analysis, the
+  individual oxygen drops, the signals averaged over minutes, and the multi-night
+  trends with tag comparisons. Each is a bounded `SELECT`; none can write; hidden
+  recordings and the ring's serial number are out of reach. Under every answer a
+  "Looked at" line lists what it actually fetched.
+- **How it is told to reason.** The system prompt (`server/ask.js`) carries this
+  project's definitions and the ground rules from the
+  [research notes](docs/analytics-research.md): numbers only from tool results,
+  one night means little, drop counts depend on the definition, ±2–3 % ring
+  accuracy, no diagnosis, and "talk to a doctor" for persistent patterns or
+  symptoms. Notes and tags are treated as data, never as instructions.
+- **What is sent.** Your question plus whatever the tools returned for it –
+  nightly metrics, drops, averaged signals, tags and (unless
+  `O2RING_LLM_SEND_NOTES=0`) your notes – to Anthropic's API under your key.
+  Nothing is sent until you press Ask.
+- **What is kept.** Questions and answers are stored in your own MySQL
+  (`ask_conversations`, `ask_messages`) so a conversation can be continued or
+  deleted from the panel.
+- **Optional SQL tool** (`O2RING_LLM_SQL=1`, `server/ask-sql.js`). For questions
+  the fixed tools cannot answer, the model may write its own `SELECT`. It runs
+  through a *separate MySQL user that can only read* – the server inspects that
+  user's grants at start-up and keeps the tool off if it finds anything beyond
+  `SELECT` – and each statement is also checked (single `SELECT`/`WITH`, no
+  file or system functions, no system schemas), run in a read-only transaction
+  with a 3-second limit, and cut off at 200 rows. Column-level grants keep the
+  ring's serial number and the raw files unreadable. Setup is in INSTALL.md.
+- **Cost and limits.** Default model `claude-opus-5` (`O2RING_LLM_MODEL` to
+  change). Measured on real nights: about 2–10 US cents per question depending on
+  how much it looks up, and about 2 cents per morning summary; follow-ups are
+  cheaper thanks to prompt caching. At most 8 look-up rounds per question and
+  `O2RING_LLM_DAILY_LIMIT` (default 100) questions a day.
+
+Answers come from an AI model reading a consumer device's data. They can be
+wrong and they are not medical advice.
+
 ## Command reference
 
 | Command | |
@@ -150,18 +213,25 @@ numbers match it exactly; all wording, and the Insights, are this project's own.
 | `./o2ring_db.py --reanalyze [--force]` | (re)compute analytics, e.g. after changing a definition |
 | `./o2ring_report.py [--session NAME] [--from-files DIR] [--demo] [--out DIR]` | static HTML reports |
 | `footer.html` | the footer every page gets (logo + links) – one place to edit |
+| `ask_panel.html` | the Ask panel and morning-summary card, shared by the start page, reports and Trends |
 | `cd server && npm start` | report server on `127.0.0.1:3000` (`HOST`, `PORT` to change) |
 | `python3 -m unittest discover -s tests` · `cd server && npm test` | tests |
 
 Server API: `GET /api/sessions[?all=1]`, `GET /api/sessions/:id`,
 `PUT /api/sessions/:id/notes`, `PUT /api/sessions/:id/tags`,
 `PUT /api/sessions/:id/hidden`, `POST /api/sessions/combine`,
-`POST /api/sessions/:id/split`, `GET /api/tags`, `GET /api/trends`.
+`POST /api/sessions/:id/split`, `GET /api/tags`, `GET /api/trends`,
+`GET /api/ask/status`, `POST /api/ask` and `POST /api/ask/stream` (server-sent events)
+with `{question, session_id?, conversation_id?}`, `GET`/`POST /api/sessions/:id/summary`,
+`GET /api/ask/conversations[?session_id=]`, `DELETE /api/ask/conversations/:id`.
 
 ## Privacy and security
 
 - Recordings are health data. `o2ring_data/`, `reports/` and `.env` are
   git-ignored – keep it that way.
+- Nothing leaves your machine unless you switch on the optional Ask panel with
+  your own Anthropic API key (see *Asking questions* above for exactly what it
+  sends). The key lives only in `.env` and is never sent to the browser.
 - The server has **no login** and binds to `127.0.0.1`. Only expose it on a
   network you trust, or put it behind a reverse proxy with authentication.
 - Even on localhost a web page you visit could try to reach it, so the server

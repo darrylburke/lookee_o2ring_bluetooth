@@ -70,6 +70,7 @@ td a { color: #fff; text-decoration: none; } td a:hover { color: var(--accent); 
 </div></div>
 <main>
   <div id="notices"></div>
+<!--ASK-->
 
   <h2>Night by night</h2>
   <p class="sub" id="seriesSub"></p>
@@ -98,6 +99,7 @@ td a { color: #fff; text-decoration: none; } td a:hover { color: var(--accent); 
 <!--FOOTER-->
 <script>
 const T = /*TRENDS_DATA*/null;
+window.ASK_CTX = { ask: T.ask, session_id: null };   // read by the Ask panel (ask_panel.html)
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];

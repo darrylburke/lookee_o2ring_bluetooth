@@ -42,6 +42,7 @@ button.primary { background: var(--accent); border-color: var(--accent); color: 
 .note { display: block; color: var(--muted); font-size: 13px; margin-top: 6px; border-left: 2px solid var(--accent); padding-left: 8px; white-space: pre-wrap; overflow-wrap: anywhere; }
 .acts { display: flex; flex-direction: column; justify-content: center; gap: 6px; padding: 8px 12px 8px 0; }
 .acts button { padding: 3px 12px; font-size: 12px; }
+.ask-below { margin-top: 26px; }
 .empty { color: var(--muted); text-align: center; padding: 40px 0; }
 .bar { position: fixed; left: 0; right: 0; bottom: 0; background: var(--card); border-top: 1px solid var(--line); padding: 12px 16px; display: none; }
 body.selecting .bar { display: block; } .bar-in { max-width: 580px; margin: 0 auto; display: flex; gap: 10px; align-items: center; }
@@ -60,12 +61,16 @@ body.selecting .bar { display: block; } .bar-in { max-width: 580px; margin: 0 au
     <button id="hiddenBtn" type="button" hidden></button>
   </div>
   <div id="list"></div>
+  <div class="ask-below">
+<!--ASK-->
+  </div>
 </main>
 <!--FOOTER-->
 <div class="bar"><div class="bar-in"><span id="selCount"></span><button id="cancelBtn" type="button">Cancel</button><button id="combineBtn" class="primary" type="button" disabled>Combine into one night</button></div></div>
 
 <script>
 const D = /*INDEX_DATA*/null;
+window.ASK_CTX = { ask: D.ask, session_id: null };   // the Ask panel here is about all nights (same threads as the Trends page)
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
