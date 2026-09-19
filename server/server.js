@@ -357,7 +357,7 @@ async function finishAsk(ctx, out) {
     "INSERT INTO ask_messages (conversation_id, role, content, looked_at, model, input_tokens, output_tokens) VALUES (?, 'assistant', ?, ?, ?, ?, ?)",
     [ctx.conversationId, out.answer, JSON.stringify(out.looked_at), out.model ?? ASK.model,
       out.usage.input_tokens + out.usage.cache_read_input_tokens + out.usage.cache_creation_input_tokens, out.usage.output_tokens]);
-  return { conversation_id: ctx.conversationId, answer: out.answer, looked_at: out.looked_at, model: out.model ?? ASK.model, rounds: out.rounds, usage: out.usage };
+  return { conversation_id: ctx.conversationId, answer: out.answer, looked_at: out.looked_at, model: out.model ?? ASK.model, rounds: out.rounds, stop_reason: out.stop_reason, usage: out.usage };
 }
 
 app.get("/api/ask/status", (req, res) => res.json(status()));
@@ -391,7 +391,7 @@ app.post("/api/ask", wrap(async (req, res) => {   // whole answer as one JSON re
   } catch (err) {
     await discardQuestion(ctx);
     const known = describeApiError(err);
-    if (known) return res.status(known.status).json({ error: known.error });
+    if (known) { console.error(`Ask failed: ${known.error} (${err.message})`); return res.status(known.status).json({ error: known.error }); }
     throw err;
   } finally {
     inFlight--;
@@ -417,7 +417,7 @@ app.post("/api/ask/stream", wrap(async (req, res) => {
     await discardQuestion(ctx);
     if (!abort.signal.aborted) {
       const known = describeApiError(err);
-      if (!known) console.error(err);
+      console.error(known ? `Ask failed: ${known.error} (${err.message})` : err);
       send("error", { error: known ? known.error : "internal error" });
     }
   } finally {

@@ -177,6 +177,23 @@ test("a tool call cut off at max_tokens is never run; unparseable tool JSON is r
   assert.equal(limited.sent.length, 1);
 });
 
+test("an answer the API drops part-way is asked again and the partial text discarded; it gives up after two tries", async () => {
+  const dropped = () => new Anthropic.APIError(undefined, { type: "error", error: { type: "overloaded_error" } }, "Overloaded", undefined);
+  const events = [];
+  const flaky = fakeClient([{ throws: dropped(), content: [] }, { stop_reason: "end_turn", content: [text("second time lucky")] }]);
+  const out = await answerQuestion({ ...base, client: flaky, runTool: async () => ({}), question: "q", retryDelays: [0, 0], onEvent: e => events.push(e.type) });
+  assert.equal(out.answer, "second time lucky");
+  assert.equal(flaky.sent.length, 2);
+  assert.equal(events[0], "reset");
+  const down = fakeClient([{ throws: dropped(), content: [] }]);
+  await assert.rejects(answerQuestion({ ...base, client: down, runTool: async () => ({}), question: "q", retryDelays: [0, 0] }), /overloaded_error/);
+  assert.equal(down.sent.length, 3);
+  const gone = new AbortController(); gone.abort();
+  const aborted = fakeClient([{ throws: new Anthropic.APIUserAbortError(), content: [] }]);
+  await assert.rejects(answerQuestion({ ...base, client: aborted, runTool: async () => ({}), question: "q", retryDelays: [0, 0], signal: gone.signal }));
+  assert.equal(aborted.sent.length, 1);
+});
+
 test("the morning summary is one tool-less request built from the fetched data", async () => {
   const client = fakeClient([{ stop_reason: "end_turn", content: [text("A steady night.")] }]);
   const out = await writeSummary({ client, cfg, system: "SYS", night: '{"id":9}', others: '{"count":2}' });

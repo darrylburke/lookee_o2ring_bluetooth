@@ -16,6 +16,7 @@ import { SQL_TOOL_DEF } from "./ask-sql.js";
 export const MAX_ROUNDS = 8;          // tool-use round trips per question
 const MAX_TOKENS = 32000;             // per streamed round: room for thinking plus a short answer
 const MAX_JSON_RETRIES = 2;           // re-issue a round whose streamed tool input was not parseable JSON
+const API_RETRY_DELAYS_MS = [1000, 4000];   // re-issue a round the API dropped part-way (see streamRound)
 export const MAX_QUESTION = 1000;     // characters
 const MAX_HISTORY = 12, MAX_HISTORY_CHARS = 6000;   // turn pairs resent with a follow-up question
 const DEFAULT_MODEL = "claude-opus-5";
@@ -63,6 +64,9 @@ How to interpret
 - A consumer ring is accurate to about +-2-3 % SpO2, so night-to-night differences of 1-2 % in mean oxygen are noise. Compare pulse and movement with the person's own other nights, not with population cut-offs. Conventional 5 / 15 / 30 drops-per-hour boundaries come from sleep-lab scoring and are only orientation here.
 - A drop followed by a pulse surge (classes A and B) is more likely a real breathing event that disturbed sleep; a drop alone (class C) may be mild or measurement wobble. Repeating 30-70 second cycles suggest events occurring back to back; oximetry cannot tell what kind.
 - Tag comparisons with fewer than about 10 nights on each side show nothing reliable, and tags often travel together (weekend, alcohol, late meal). Say so rather than drawing a conclusion.
+- When asked whether they have a condition, or whether something is dangerous, do not open with "yes" or "no" and do not call a reading harmless, fine, nothing to worry about or dangerous - you cannot know either way. Say first what the ring can and cannot show, then what the recordings do show, then when it would be worth raising with a doctor.
+- When the question is about low or worrying oxygen readings, mention that the ring is accurate to about +-2-3 % and that brief dips are common in overnight recordings, alongside how long the readings actually stayed low.
+- Pulse values are averages over a few beats, one every 4 seconds. Describe their spread as variation between readings or between samples - never as "beat-to-beat".
 - Never diagnose, never name a condition the person "has", never advise starting, stopping or changing a treatment or device setting. If a pattern persists over many nights (for example a multi-night median of 15 or more drops of 4 % per hour, minutes below 88-90 % on many nights) or the person mentions symptoms such as daytime sleepiness, witnessed pauses in breathing or morning headaches, suggest discussing it with a doctor and bringing the reports. A quiet-looking night does not rule anything out.
 
 How to answer
@@ -112,9 +116,17 @@ export const toolDefs = ({ sql = false } = {}) =>
 
 class TruncatedToolInput extends Error {}
 
-/** One streamed model turn. Text deltas go to onText as they arrive; resolves to the complete message. */
-async function streamRound({ client, cfg, params, onText, signal }) {
-  for (let attempt = 0; ; attempt++) {
+// The SDK already retries a request that fails to start (429, 5xx, no connection). What it cannot retry is a stream
+// that breaks once it is running - "overloaded" sent as a stream event, or the connection dropping mid-answer. Those
+// arrive as an APIError without an HTTP status, and asking again nearly always works.
+const droppedMidStream = err => err instanceof Anthropic.APIError && !(err instanceof Anthropic.APIUserAbortError) && err.status == null;
+
+/**
+ * One streamed model turn. Text deltas go to onText as they arrive; resolves to the complete message.
+ * onRetry is called before a round is issued again, so a listener can discard the text it was sent so far.
+ */
+async function streamRound({ client, cfg, params, onText, onRetry, signal, delays = API_RETRY_DELAYS_MS }) {
+  for (let attempt = 0, dropped = 0; ; attempt++) {
     try {
       const stream = cfg.fallbacks
         ? client.beta.messages.stream({ ...params, betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" }, { signal })
@@ -127,7 +139,15 @@ async function streamRound({ client, cfg, params, onText, signal }) {
         throw new TruncatedToolInput("the model ran out of output tokens in the middle of a look-up");
       return message;
     } catch (err) {
-      // only un-parseable streamed tool JSON is worth re-issuing; API errors, aborts and truncation are not
+      if (droppedMidStream(err) && !signal?.aborted && dropped < delays.length) {
+        console.error(`Ask: the API dropped the answer part-way (${err.message || "no message"}) - asking again`);
+        await new Promise(r => setTimeout(r, delays[dropped++]));
+        if (signal?.aborted) throw err;
+        attempt--;   // does not use up a JSON retry
+        onRetry?.();
+        continue;
+      }
+      // otherwise only un-parseable streamed tool JSON is worth re-issuing; API errors, aborts and truncation are not
       if (err instanceof Anthropic.APIError || err instanceof TruncatedToolInput || err?.name === "AbortError" || signal?.aborted || attempt >= MAX_JSON_RETRIES) throw err;
     }
   }
@@ -139,7 +159,7 @@ async function streamRound({ client, cfg, params, onText, signal }) {
  * text a round produced before asking for look-ups is a preamble, so "reset" tells the listener to discard it.
  * Returns { answer, looked_at, rounds, model, stop_reason, usage }.
  */
-export async function answerQuestion({ client, runTool, cfg, system, context, question, history = [], onEvent, signal }) {
+export async function answerQuestion({ client, runTool, cfg, system, context, question, history = [], onEvent, signal, retryDelays }) {
   const messages = [];
   const first = history.length ? history[0].content : question;
   messages.push({ role: "user", content: [{ type: "text", text: context }, { type: "text", text: first }] });
@@ -155,7 +175,8 @@ export async function answerQuestion({ client, runTool, cfg, system, context, qu
       cache_control: { type: "ephemeral" },                        // system + tools + the conversation so far
       ...(lastRound ? { tool_choice: { type: "none" } } : {}),      // out of look-ups: answer with what you have
     };
-    const response = await streamRound({ client, cfg, params, signal, onText: text => onEvent?.({ type: "delta", text }) });
+    const response = await streamRound({ client, cfg, params, signal, delays: retryDelays, onText: text => onEvent?.({ type: "delta", text }),
+      onRetry: () => onEvent?.({ type: "reset" }) });
     for (const k of Object.keys(usage)) usage[k] += response.usage?.[k] ?? 0;
 
     if (response.stop_reason === "refusal")   // also covers a refusal that cut a tool call short: nothing from this turn is run

@@ -195,6 +195,11 @@ explaining how to enable it – until `ANTHROPIC_API_KEY` is set in `.env`.
   file or system functions, no system schemas), run in a read-only transaction
   with a 3-second limit, and cut off at 200 rows. Column-level grants keep the
   ring's serial number and the raw files unreadable. Setup is in INSTALL.md.
+- **Is it any good?** `evals/ask/` holds 32 test questions – look-ups,
+  comparisons, things the ring cannot measure, safety, privacy, a follow-up –
+  that are asked through the running server and graded against facts pulled
+  fresh from your own database. Run them after changing the prompt, the tools
+  or the model: see **[evals/ask/README.md](evals/ask/README.md)**.
 - **Cost and limits.** Default model `claude-opus-5` (`O2RING_LLM_MODEL` to
   change). Measured on real nights: about 2–10 US cents per question depending on
   how much it looks up, and about 2 cents per morning summary; follow-ups are

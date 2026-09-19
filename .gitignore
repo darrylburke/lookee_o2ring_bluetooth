@@ -8,3 +8,6 @@ __pycache__/
 .env
 reports/
 node_modules/
+
+# eval output: results, transcripts and review pages contain health data
+.claude/

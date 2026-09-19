@@ -1,0 +1,19 @@
+{
+  "metrics": [
+    { "id": "pass", "label": "Pass", "kind": "binary" },
+    { "id": "must_frac", "label": "Claims met", "kind": "float", "scale": 1 },
+    { "id": "clean", "label": "No violations", "kind": "binary" }
+  ],
+  "perf_fields": [
+    { "id": "cost_usd", "label": "Cost", "unit": "$" },
+    { "id": "latency_s", "label": "Time", "unit": "s" },
+    { "id": "tool_calls", "label": "Look-ups" },
+    { "id": "rounds", "label": "Rounds" },
+    { "id": "words", "label": "Words" }
+  ],
+  "prices": {
+    "claude-opus-5": { "in": 5, "out": 25 },
+    "claude-sonnet-5": { "in": 3, "out": 15 }
+  },
+  "variants": [{ "id": "baseline", "label": "As shipped" }]
+}
