@@ -58,6 +58,12 @@ main { max-width: 540px; margin: 0 auto; padding: 28px 22px 48px; }
 .odi-grid { width: 100%; }
 .odi-grid .row { font-size: 17px; }
 .odi-rows { margin: 0; } .odi-rows .row { padding: 3px 0; }
+.odi-group { border: 1px solid; border-left-width: 4px; border-radius: 8px; padding: 6px 10px 8px 12px; margin: 10px 0; }
+.odi-group.g4 { border-color: rgba(255, 183, 77, .55); background: rgba(255, 183, 77, .06); }
+.odi-group.g3 { border-color: rgba(110, 179, 255, .55); background: rgba(110, 179, 255, .06); }
+.odi-title { font: 700 13px var(--heading); letter-spacing: .6px; text-transform: uppercase; margin-bottom: 2px; }
+.odi-title small { font: 400 11.5px var(--body); text-transform: none; letter-spacing: 0; color: var(--muted); }
+.g4 .odi-title { color: #ffb74d; } .g3 .odi-title { color: #6eb3ff; }
 .odi-note { color: var(--muted); font-size: 12.5px; line-height: 1.5; margin: 6px 0 8px; }
 .parts { text-align: center; color: var(--muted); font-size: 12.5px; line-height: 1.5; margin: 0 0 4px; padding: 0 12px 0 30px; }
 .warn { color: #ff9800; font-size: 15px; padding: 4px 0 2px; }
@@ -123,6 +129,49 @@ details.defs { color: var(--muted); font-size: 12.5px; line-height: 1.6; margin:
 details.defs summary { cursor: pointer; color: var(--subtitle); font-size: 13.5px; padding: 6px 0; }
 details.defs dt { color: var(--subtitle); margin-top: 8px; } details.defs dd { margin: 0; }
 .caution { border-left: 3px solid #ff9800; padding: 8px 12px; background: rgba(255, 152, 0, .08); color: var(--subtitle); font-size: 13px; line-height: 1.55; border-radius: 0 6px 6px 0; margin-bottom: 22px; }
+/* ---------- chart guides + wide-screen layout ---------- */
+.guide { margin: 6px 0 0 42px; color: var(--subtitle); font-size: 13px; line-height: 1.55; }
+.guide summary { cursor: pointer; color: var(--muted); font-size: 12.5px; padding: 4px 0; }
+.guide summary:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.guide-body p { margin: 0 0 9px; }
+.guide-body h5 { margin: 12px 0 5px; font: 700 12px var(--heading); letter-spacing: .7px; text-transform: uppercase; color: var(--muted); }
+.guide-body h5:first-child { margin-top: 2px; }
+.keys { list-style: none; margin: 0 0 4px; padding: 0; }
+.keys li { display: grid; grid-template-columns: 30px 1fr; gap: 9px; align-items: start; margin-bottom: 7px; }
+.keys .sw { height: 12px; margin-top: 4px; border-radius: 2px; justify-self: center; width: 26px; }
+.keys .sw.tick { width: 3px; height: 14px; margin-top: 2px; border-radius: 0; } .keys .sw.tick.short { height: 8px; margin-top: 6px; }
+.keys .sw.tri { width: 0; height: 0; background: none; border: 7px solid transparent; border-bottom: 11px solid #ff9800; border-top: 0; border-radius: 0; margin-top: 3px; }
+.keys .sw.gap { background: repeating-linear-gradient(90deg, #6eb3ff 0 8px, transparent 8px 18px); height: 8px; margin-top: 6px; }
+.keys .sw.cursor { width: 2px; height: 16px; background: rgba(255, 255, 255, .8); border-radius: 0; margin-top: 1px; }
+.keys b, .guide-body p b { color: #fff; font-weight: 600; }
+.night { background: rgba(255, 255, 255, .05); border-radius: 8px; padding: 8px 11px; margin: 2px 0 4px; }
+.night span { display: flex; justify-content: space-between; gap: 10px; } .night span b { white-space: nowrap; }
+.guide-more { display: none; }
+.cols { display: flex; flex-direction: column; }
+.col-app, .col-ins { display: contents; }         /* narrow: one column, Insights right after the summary card */
+.cols .info { order: 1; } .cols #insights { order: 2; } .cols > div > * { order: 3; } .cols .info { order: 1; } .cols #insights { order: 2; }
+@media (min-width: 1080px) {
+  main, .topbar-in { max-width: 1240px; }
+  .chart-row { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 30px; align-items: start; }
+  .chart-row + .chart-row { margin-top: 10px; }
+  .chart { height: 250px; } .chart.motion { height: 170px; }
+  .guide { margin: 24px 0 0; border-left: 1px solid rgba(255, 255, 255, .1); padding-left: 22px; }
+  .guide summary { display: none; }
+  #dropLegend { display: none; }                   /* the guide beside the chart explains the ticks */
+  .guide .g-more { display: none; }                /* shown under the chart instead */
+  .guide-more { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 0 26px; margin: 4px 0 0 42px;
+    color: var(--subtitle); font-size: 13px; line-height: 1.55; }
+  .guide-more h5 { margin: 8px 0 5px; font: 700 12px var(--heading); letter-spacing: .7px; text-transform: uppercase; color: var(--muted); }
+  .guide-more p { margin: 0; } .guide-more b { color: #fff; font-weight: 600; }
+  .chart-row + .chart-row { border-top: 1px solid rgba(255, 255, 255, .07); padding-top: 8px; }
+  .charts { padding: 22px 28px 26px 10px; }
+  .cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-rows: auto 1fr; gap: 0 32px; align-items: start; }
+  /* rows: the tall Insights column spans both; 'auto 1fr' lets its extra height fall into row 2, not between the left cards */
+  .col-app, .col-ins { display: block; min-width: 0; }
+  .col-app { grid-column: 1; } .col-ins { grid-column: 2; grid-row: 1 / span 2; }
+  .col-ins .ins-head { margin-top: 0; }
+  .disclaimer { max-width: 760px; margin: 10px auto 0; text-align: center; }
+}
 @media (max-width: 380px) { .tiles { grid-template-columns: 1fr; } }
 @media (max-width: 480px) {
   main { padding: 18px 12px 40px; }
@@ -131,7 +180,7 @@ details.defs dt { color: var(--subtitle); margin-top: 8px; } details.defs dd { m
   .chart-head h2, .avg { font-size: 20px; } .when { font-size: 17px; }
   .score { padding-left: 20px; gap: 24px; }
 }
-@media print { .topbar { position: static; } .icons, .back, .notes .count { visibility: hidden; } }
+@media print { .guide summary { display: none; } .topbar { position: static; } .icons, .back, .notes .count { visibility: hidden; } }
 </style>
 </head>
 <body>
@@ -150,17 +199,33 @@ details.defs dt { color: var(--subtitle); margin-top: 8px; } details.defs dd { m
   <section class="card charts">
     <p class="when" id="when"></p>
 
-    <div class="chart-head"><h2>Oxygen Level</h2><span class="avg" id="avgSpo2"></span></div>
-    <div class="chart" data-chart="spo2"><canvas></canvas><div class="tip"></div></div>
-    <div class="legend chart-legend" id="dropLegend" hidden><span><i style="background:var(--accent)"></i>drop with pulse surge</span><span><i style="background:#cfd6e4"></i>drop only</span><span>tall = 4 % or more</span></div>
+    <div class="chart-row"><div class="chart-main">
+      <div class="chart-head"><h2>Oxygen Level</h2><span class="avg" id="avgSpo2"></span></div>
+      <div class="chart" data-chart="spo2"><canvas></canvas><div class="tip"></div></div>
+      <div class="legend chart-legend" id="dropLegend" hidden><span><i style="background:var(--accent)"></i>drop with pulse surge</span><span><i style="background:#cfd6e4"></i>drop only</span><span>tall = 4 % or more</span></div>
+      <div class="guide-more" id="more-spo2"></div>
+    </div>
+      <details class="guide" data-guide="spo2"><summary>How to read this chart</summary><div class="guide-body" id="guide-spo2"></div></details>
+    </div>
 
-    <div class="chart-head"><h2>Pulse Rate</h2><span class="avg" id="avgPr"></span></div>
-    <div class="chart" data-chart="pr"><canvas></canvas><div class="tip"></div></div>
+    <div class="chart-row"><div class="chart-main">
+      <div class="chart-head"><h2>Pulse Rate</h2><span class="avg" id="avgPr"></span></div>
+      <div class="chart" data-chart="pr"><canvas></canvas><div class="tip"></div></div>
+      <div class="guide-more" id="more-pr"></div>
+    </div>
+      <details class="guide" data-guide="pr"><summary>How to read this chart</summary><div class="guide-body" id="guide-pr"></div></details>
+    </div>
 
-    <div class="chart-head"><h2>Body Movement</h2></div>
-    <div class="chart motion" data-chart="motion"><canvas></canvas><div class="tip"></div></div>
+    <div class="chart-row"><div class="chart-main">
+      <div class="chart-head"><h2>Body Movement</h2></div>
+      <div class="chart motion" data-chart="motion"><canvas></canvas><div class="tip"></div></div>
+      <div class="guide-more" id="more-motion"></div>
+    </div>
+      <details class="guide" data-guide="motion"><summary>How to read this chart</summary><div class="guide-body" id="guide-motion"></div></details>
+    </div>
   </section>
 
+  <div class="cols"><div class="col-app">
   <section class="card info">
     <div class="row"><span>Start Time</span><span class="v" id="startTime"></span></div>
     <div class="row"><span>Measurement Time</span><span class="v" id="measTime"></span></div>
@@ -174,6 +239,7 @@ details.defs dt { color: var(--subtitle); margin-top: 8px; } details.defs dd { m
   </section>
 
 
+  </div><div class="col-ins">
   <section id="insights" hidden>
     <div class="ins-head"><h3>Insights</h3><a id="trendsLink" href="#" hidden>All nights &amp; trends →</a></div>
     <p class="ins-sub" id="insSub"></p>
@@ -225,6 +291,7 @@ details.defs dt { color: var(--subtitle); margin-top: 8px; } details.defs dd { m
     <details class="defs"><summary>How these numbers are defined</summary><dl id="defs"></dl></details>
   </section>
 
+  </div><div class="col-app">
   <h3>Oxygen Level Distribution</h3>
   <section class="card tcard"><table id="spo2Dist">
     <thead><tr><th>Range</th><th>Duration</th><th>%Total</th><th>Drops<br>(ODI4%)</th></tr></thead><tbody></tbody></table></section>
@@ -238,6 +305,8 @@ details.defs dt { color: var(--subtitle); margin-top: 8px; } details.defs dd { m
     <textarea id="notes" maxlength="200" placeholder="Enter to add notes"></textarea>
     <div class="count"><span id="noteStatus" role="status"></span><span id="noteCount">0</span>/200</div>
   </section>
+
+  </div></div>
 
   <section class="disclaimer">
     <p><b>Please note</b><br>Everything on this page is calculated from the readings of a consumer finger oximeter, which is accurate to about ±2–3 %. The drop counts and ODI figures are informational, meant for following your own nights over time.</p>
@@ -282,8 +351,9 @@ if (INS && INS.desaturations.odi_rows) {
   const row = (l, v) => `<div class="row"><span>${l}</span><span class="v">${v}</span></div>`;
   $("odi").className = "odi-rows";
   $("odi").innerHTML = [4, 3].map(d => { const o = INS.desaturations.odi_rows[d];
-    return row(`ODI ${d}%`, `${o.index ?? "--"} /h`) + row(`Total ODI ${d}% Drops`, o.drops) + row(`Time in ODI ${d}% Drops`, hms(o.time_in_drops_s)) +
-      row(`% Time in ODI ${d}% Drops`, `${o.pct_time_in_drops ?? "--"}%`) + row(`Avg ODI ${d}% Duration`, hms(o.avg_duration_s)); }).join("") +
+    return `<div class="odi-group g${d}" role="group" aria-label="Oxygen drops of ${d} percent or more"><div class="odi-title">Drops of ${d} % or more${d === 3 ? " <small>(includes the 4 % drops)</small>" : ""}</div>` +
+      row(`ODI ${d}%`, `${o.index ?? "--"} /h`) + row(`Total ODI ${d}% Drops`, o.drops) + row(`Time in ODI ${d}% Drops`, hms(o.time_in_drops_s)) +
+      row(`% Time in ODI ${d}% Drops`, `${o.pct_time_in_drops ?? "--"}%`) + row(`Avg ODI ${d}% Duration`, hms(o.avg_duration_s)) + `</div>`; }).join("") +
     `<div class="odi-note">ODI rows are calculated by this tool from the raw samples – the app still shows “Coming Soon”. The ring's own count: ${R.drops_3pct ?? "--"} drops ≥3 %, ${R.drops_4pct ?? "--"} ≥4 %.</div>`;
 } else {
   $("odi").innerHTML = `${infoIcon}<div><b>ODI 3% &amp; 4% Metrics</b><span>Not available for this recording</span></div>`;
@@ -443,6 +513,47 @@ function renderInsights() {
   }
 }
 renderInsights();
+
+/* ---------- "how to read this chart" guides: beside each chart on wide screens, folded away below it on narrow ones ---------- */
+function renderGuides() {
+  const ok = I && !I.too_short, s = ok && I.spo2, d = ok && I.desaturations, p = ok && I.pulse, m = ok && I.movement, se = ok && I.sleep_estimate;
+  const key = (cls, style, text) => `<li><span class="sw ${cls}" style="${style}"></span><span>${text}</span></li>`;
+  const fact = (label, value) => `<span>${label}<b>${value}</b></span>`;
+  const combined = R.parts && R.parts.length > 1;
+  // "This night" + orientation: under the chart on wide screens (where the space is), inside the fold-out on narrow ones
+  const more = (id, html) => { $(`more-${id}`).innerHTML = html; return `<div class="g-more">${html}</div>`; };
+  $("guide-spo2").innerHTML = `<h5>What it shows</h5><p>Blood oxygen saturation (SpO2), one reading every 4 seconds.</p><h5>Key</h5><ul class="keys">` +
+    key("", "background:linear-gradient(90deg,#2db35c,#e8863f 45%,#f53535)", "<b>Line colour follows the value</b>: green in the mid-90s and above, orange in the low 90s, red lower down. The blue area is just shading.") +
+    (EVENTS.length ? key("tick", "background:#fe5000", "<b>Orange tick</b> at the top: an oxygen drop of 3 % or more that was followed by a pulse surge – most likely a real event that disturbed your sleep.") +
+      key("tick", "background:#cfd6e4", "<b>White tick</b>: a drop with no pulse reaction – a milder event, or measurement wobble.") +
+      key("tick short", "background:#cfd6e4", "<b>Short tick</b> = a 3 % drop, <b>tall</b> = 4 % or more.") : "") +
+    (R.spo2_alert != null ? key("tri", "", `<b>Orange triangle</b> on the bottom edge: a reading below ${R.spo2_alert} %, the ring's own low-oxygen reminder level (where it vibrates, if switched on).`) : "") +
+    key("gap", "", `<b>Breaks in the line</b>: no valid reading${combined ? " – here mostly the gaps between the combined recordings" : " (ring off the finger, or too much movement)"}.`) +
+    key("cursor", "", "<b>Vertical line</b>: your mouse. It shows on all three charts at once so you can line up oxygen, pulse and movement.") + `</ul>` + more("spo2",
+    (ok ? `<div><h5>This night</h5><div class="night">${fact("Average / 1st-percentile low", `${s.mean}% / ${s.nadir_p1}%`)}${fact("Time below 90 %", `${mmss(s.time_below["90"].seconds)} (${s.time_below["90"].pct}%)`)}${I.short ? "" : fact("Drops ≥3 % · ≥4 % per hour", `${d.odi3} · ${d.odi4}`)}${fact("…with a pulse surge", `${d.arousal_linked_pct ?? "--"}%`)}</div></div>` : "") +
+    `<div><h5>For orientation</h5><p>Healthy sleepers mostly sit between 94 and 98 %, and brief dips of a few percent are common. What matters is a pattern over many nights – a lot of drops per hour, or minutes spent below 90 % – not a single spike.</p></div>`);
+
+  $("guide-pr").innerHTML = `<h5>What it shows</h5><p>Pulse rate every 4 seconds, which the ring averages over a few heartbeats.</p><h5>Key</h5><ul class="keys">` +
+    key("", "background:linear-gradient(90deg,#f7532b,#e47e22 22%,#2da644 45%,#e87823 80%,#ff3c2f)", "<b>Line colour is the app's scale</b>: green through the middle of the range, orange and red toward very low or very high rates. A low, orange sleeping pulse is normal for many fit people.") +
+    key("tick", "background:#2da644;height:16px;margin-top:0", "<b>Short spikes</b> are pulse surges – the body briefly rousing. Check the oxygen chart above: a surge right after a drop marks the end of a breathing event.") +
+    (R.pr_alert ? key("tri", "", `<b>Orange triangle</b>: pulse outside the ring's reminder range (${R.pr_alert[0]}–${R.pr_alert[1]} /min).`) : "") + `</ul>` + more("pr",
+    (p ? `<div><h5>This night</h5><div class="night">${fact("Average", `${p.mean} /min`)}${p.lowest_30min != null ? fact("Sleeping pulse (lowest 30 min)", `${p.lowest_30min} at ${clock(new Date(start.getTime() + p.lowest_30min_at_h * 3600e3))}`) : ""}${I.short ? "" : fact("Surges ≥6 bpm per hour", p.rises6_per_h)}${p.curve_shape ? fact("Shape of the night", p.curve_shape) : ""}</div></div>` : "") +
+    `<div><h5>For orientation</h5><p>Pulse normally sinks during the first hours, bottoms out around the middle of the night and rises toward morning. A low point that comes very late, or a pulse that stays up all night, often follows alcohol, a late meal, a hard workout or a coming illness – compare with your own usual nights rather than with anyone else's.</p></div>`);
+
+  $("guide-motion").innerHTML = `<h5>What it shows</h5><p>How much the ring moved in each 4-second slot. The 0–200 scale is the ring's own and is not calibrated – read it as “how vigorous”, not as a measurement.</p><h5>Key</h5><ul class="keys">` +
+    key("tick", "background:#34c759;height:16px;margin-top:0", "<b>Single spikes</b>: turning over or shifting a hand. <b>Clusters</b> of spikes: a restless spell or time awake.") +
+    key("", "background:#343c4a;outline:1px solid #5b6670", "<b>Flat stretches</b>: lying still – usually your deepest, most settled sleep.") + `</ul>` + more("motion",
+    (m ? `<div><h5>This night</h5><div class="night">${I.short ? "" : fact("Movement bouts per hour", m.bouts_per_h)}${fact("Major movements (≥30 s)", m.major_movements)}${fact("Longest still period", `${m.longest_still_min} min`)}${se && se.found && !I.short ? fact("Restless / wake-like (estimate)", `${se.wake_like_min} min`) : ""}</div></div>` : "") +
+    `<div><h5>For orientation</h5><p>Everyone moves many times a night. Look for movement that lines up with oxygen drops and pulse surges above – that combination is a breathing event ending in a brief arousal. Movement on its own is just movement.</p></div>`);
+
+  // open beside the chart on wide screens, folded away on narrow ones (unless the reader opened it)
+  const wide = matchMedia("(min-width: 1080px)"), guides = [...document.querySelectorAll(".guide")];
+  const sync = () => guides.forEach(g => { if (wide.matches) g.open = true; else if (!g.dataset.touched) g.open = false; });
+  guides.forEach(g => g.querySelector("summary").addEventListener("click", () => { g.dataset.touched = "1"; }));
+  wide.addEventListener("change", sync); sync();
+  addEventListener("beforeprint", () => guides.forEach(g => { g.open = true; }));
+}
+renderGuides();
 if (EVENTS.length) $("dropLegend").hidden = false;
 
 /* ---------- charts ---------- */

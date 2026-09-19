@@ -31,6 +31,19 @@ h2 { font: 700 21px var(--heading); margin: 30px 0 6px; }
 .m .n small { font-size: 13px; font-weight: 400; color: var(--subtitle); margin-left: 3px; }
 .m .s { color: var(--muted); font-size: 12px; margin-bottom: 6px; }
 .m canvas { width: 100%; height: 110px; display: block; }
+.m .d { color: var(--muted); font-size: 12px; line-height: 1.5; margin: 8px 0 0; }
+.howto { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 6px 28px; margin-bottom: 14px; color: var(--subtitle); font-size: 13px; line-height: 1.55; }
+.howto h3 { margin: 0 0 4px; font: 700 12px var(--heading); letter-spacing: .7px; text-transform: uppercase; color: var(--muted); }
+.howto p { margin: 0 0 8px; } .howto b { color: #fff; font-weight: 600; }
+.howto i { display: inline-block; width: 14px; height: 3px; margin-right: 6px; vertical-align: 3px; background: var(--accent); }
+.howto i.dot { width: 7px; height: 7px; border-radius: 50%; background: #6eb3ff; vertical-align: 0; } .howto i.grey { background: #8f91b0; }
+.pair { display: grid; gap: 0 28px; }
+@media (min-width: 1080px) {
+  main, .topbar-in { max-width: 1240px; }
+  .grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .m canvas { height: 130px; }
+  .pair { grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); align-items: start; }
+}
 .legend { display: flex; flex-wrap: wrap; gap: 4px 16px; color: var(--subtitle); font-size: 12px; margin: 0 0 12px; }
 .legend i { display: inline-block; width: 14px; height: 3px; margin-right: 6px; vertical-align: 3px; background: var(--accent); }
 .legend i.dot { width: 7px; height: 7px; border-radius: 50%; background: #6eb3ff; vertical-align: 0; }
@@ -38,7 +51,10 @@ table { width: 100%; border-collapse: collapse; font-size: 14px; }
 th { color: var(--subtitle); font-weight: 500; font-size: 12.5px; text-align: right; padding: 4px 6px 8px; }
 td { padding: 5px 6px; text-align: right; color: var(--subtitle); border-top: 1px solid rgba(255, 255, 255, .06); }
 th:first-child, td:first-child { text-align: left; }
-td:first-child { white-space: nowrap; }
+td:first-child, td:nth-child(2) { white-space: nowrap; }
+#nights td:last-child { white-space: nowrap; }
+.tall { max-height: 460px; overflow-y: auto; }
+.tall thead th { position: sticky; top: 0; background: var(--card); }
 td a { color: #fff; text-decoration: none; } td a:hover { color: var(--accent); }
 .scroll { overflow-x: auto; }
 .tagname { color: #fff; font-weight: 600; } .dim { color: var(--muted); }
@@ -57,19 +73,25 @@ td a { color: #fff; text-decoration: none; } td a:hover { color: var(--accent); 
 
   <h2>Night by night</h2>
   <p class="sub" id="seriesSub"></p>
-  <div class="legend"><span><i class="dot"></i>each night</span><span><i></i>rolling 14-night median</span><span><i style="background:#8f91b0"></i>rolling 7-night median</span></div>
+  <div class="card howto">
+    <div><h3>Each chart</h3><p><i class="dot"></i><b>Dot</b> = one full night. <i></i><b>Orange line</b> = median of the last 14 nights – the number to go by. <i class="grey"></i><b>Grey line</b> = median of the last 7, which reacts faster but jumps around more.</p></div>
+    <div><h3>The numbers above it</h3><p>The <b>big number</b> is the 14-night median. <b>Middle half</b> is the range your typical nights fall in (25th–75th percentile); <b>best</b> and <b>worst</b> are the extremes so far.</p></div>
+    <div><h3>How to use it</h3><p>Single nights swing a lot, so look at where the orange line is heading over weeks, and whether it moves after you change something – then tag those nights so they can be compared below.</p></div>
+  </div>
   <div class="grid" id="series"></div>
-
-  <h2>How often is a night above the usual cut-offs?</h2>
-  <p class="sub">Share of full nights with this many oxygen drops per hour. 5 / 15 / 30 per hour are the conventional mild / moderate / severe boundaries, borrowed from sleep-lab scoring – a ring reads differently, so treat these as orientation.</p>
-  <div class="card scroll"><table id="thresholds"><thead><tr><th>Drops per hour</th><th>nights with drops ≥3 %</th><th>nights with drops ≥4 %</th></tr></thead><caption id="thrCaption" style="caption-side:bottom;text-align:left;color:var(--muted);font-size:12.5px;padding-top:8px"></caption><tbody></tbody></table></div>
 
   <h2>Tags: nights with vs. without</h2>
   <p class="sub" id="tagSub"></p>
   <div class="card scroll"><table id="tagTable"></table></div>
 
+  <div class="pair"><div>
+  <h2>How often is a night above the usual cut-offs?</h2>
+  <p class="sub">Share of full nights with this many oxygen drops per hour. 5 / 15 / 30 per hour are the conventional mild / moderate / severe boundaries, borrowed from sleep-lab scoring – a ring reads differently, so treat these as orientation.</p>
+  <div class="card scroll"><table id="thresholds"><thead><tr><th>Drops per hour</th><th>nights with drops ≥3 %</th><th>nights with drops ≥4 %</th></tr></thead><caption id="thrCaption" style="caption-side:bottom;text-align:left;color:var(--muted);font-size:12.5px;padding-top:8px"></caption><tbody></tbody></table></div>
+  </div><div>
   <h2>All full nights</h2>
-  <div class="card scroll"><table id="nights"></table></div>
+  <div class="card scroll tall"><table id="nights"></table></div>
+  </div></div>
 
   <p class="foot">Medians, not single nights: oxygen-drop counts vary by about ±4 per hour from one night to the next, and one night misclassifies severity 20–50 % of the time; accuracy levels off at about 14 nights. A consumer ring is accurate to about ±2–3 % SpO2. Nothing here is a diagnosis.</p>
 </main>
@@ -93,7 +115,7 @@ $("seriesSub").textContent = N ? `${N} full night${N > 1 ? "s" : ""}, ${day(T.ni
 $("series").innerHTML = T.series.map((m, k) => `<div class="card m"><div class="k">${esc(m.label)}</div>
   <div class="n">${fmt(m.summary.median14, m.digits)}<small>${esc(m.unit)}</small></div>
   <div class="s">middle half ${fmt(m.summary.p25, m.digits)}–${fmt(m.summary.p75, m.digits)} · best ${fmt(m.summary.best, m.digits)} · worst ${fmt(m.summary.worst, m.digits)}</div>
-  <canvas data-k="${k}" role="img" aria-label="${esc(m.label)} per night"></canvas></div>`).join("");
+  <canvas data-k="${k}" role="img" aria-label="${esc(m.label)} per night"></canvas><p class="d">${esc(m.desc || "")}</p></div>`).join("");
 
 function draw(cv) {
   const m = T.series[cv.dataset.k], dpr = devicePixelRatio || 1, W = cv.clientWidth, H = cv.clientHeight;
