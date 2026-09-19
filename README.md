@@ -20,11 +20,21 @@ shows.
 > affiliated with or endorsed by Lookee, Viatom, Wellue or Lepu. If something in
 > your data worries you, talk to a doctor.
 
-| Report (app look-alike) | Insights | Sessions |
-|---|---|---|
-| ![Report](docs/img/report.png) | ![Insights](docs/img/insights.png) | ![Sessions](docs/img/sessions.png) |
+**A night's report** – the app's charts, with a key and that night's numbers beside each one on a wide screen:
+
+![Report: oxygen, pulse and movement charts with guides](docs/img/report.png)
+
+**Summary and Insights** – the app's summary (with its ODI rows filled in) next to this project's own analysis:
+
+![Summary, distributions and Insights](docs/img/insights.png)
+
+**Trends** across nights:
 
 ![Trends](docs/img/trends.png)
+
+| Sessions list – combine, split, hide | The same report on a phone |
+|---|---|
+| ![Sessions](docs/img/sessions.png) | ![Phone layout](docs/img/phone.png) |
 
 *All screenshots show synthetic data (`./o2ring_report.py --demo`).*
 
