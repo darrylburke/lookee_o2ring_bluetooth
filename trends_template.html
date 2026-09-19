@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>O2Ring Trends</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Lato:wght@700;900&family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root { --bg: #1c2431; --card: #343c4a; --title: #fff; --subtitle: #d9d9d9; --muted: #a5a7bc; --accent: #fe5000;
+  --heading: "Lato", system-ui, sans-serif; --body: "Poppins", system-ui, sans-serif; }
+* { box-sizing: border-box; }
+html { background: var(--bg); }
+body { margin: 0; color: var(--title); font-family: var(--body); -webkit-font-smoothing: antialiased; }
+.topbar { position: sticky; top: 0; z-index: 5; background: var(--card); }
+.topbar-in { max-width: 900px; margin: 0 auto; display: flex; align-items: center; padding: 14px 24px; }
+.topbar h1 { flex: 1; margin: 0 40px 0 0; text-align: center; font: 900 28px var(--heading); }
+.back { width: 40px; height: 40px; border-radius: 50%; background: var(--accent); display: grid; place-items: center; flex: none; }
+main { max-width: 900px; margin: 0 auto; padding: 24px 20px 48px; }
+h2 { font: 700 21px var(--heading); margin: 30px 0 6px; }
+.sub { color: var(--muted); font-size: 13.5px; line-height: 1.55; margin: 0 0 14px; }
+.card { background: var(--card); border-radius: 10px; padding: 14px 16px; }
+.notice { border-left: 3px solid #ff9800; background: rgba(255, 152, 0, .08); border-radius: 0 6px 6px 0; padding: 10px 14px;
+  color: var(--subtitle); font-size: 14px; line-height: 1.6; margin-bottom: 12px; }
+.notice.info { border-color: #6eb3ff; background: rgba(110, 179, 255, .08); }
+.progress { height: 8px; border-radius: 4px; background: #1c2431; overflow: hidden; margin-top: 8px; }
+.progress div { height: 100%; background: var(--accent); }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+.m .k { color: var(--subtitle); font-size: 13px; }
+.m .n { font: 600 24px var(--body); margin: 1px 0; white-space: nowrap; }
+.m .n small { font-size: 13px; font-weight: 400; color: var(--subtitle); margin-left: 3px; }
+.m .s { color: var(--muted); font-size: 12px; margin-bottom: 6px; }
+.m canvas { width: 100%; height: 110px; display: block; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 16px; color: var(--subtitle); font-size: 12px; margin: 0 0 12px; }
+.legend i { display: inline-block; width: 14px; height: 3px; margin-right: 6px; vertical-align: 3px; background: var(--accent); }
+.legend i.dot { width: 7px; height: 7px; border-radius: 50%; background: #6eb3ff; vertical-align: 0; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th { color: var(--subtitle); font-weight: 500; font-size: 12.5px; text-align: right; padding: 4px 6px 8px; }
+td { padding: 5px 6px; text-align: right; color: var(--subtitle); border-top: 1px solid rgba(255, 255, 255, .06); }
+th:first-child, td:first-child { text-align: left; }
+td:first-child { white-space: nowrap; }
+td a { color: #fff; text-decoration: none; } td a:hover { color: var(--accent); }
+.scroll { overflow-x: auto; }
+.tagname { color: #fff; font-weight: 600; } .dim { color: var(--muted); }
+.pill { display: inline-block; border: 1px solid #5b6670; border-radius: 10px; padding: 0 7px; font-size: 11.5px; margin-left: 4px; color: var(--subtitle); }
+.worse { color: #ffb74d; } .better { color: #7fe39a; }
+.foot { color: var(--muted); font-size: 12.5px; line-height: 1.6; margin-top: 28px; }
+</style>
+</head>
+<body>
+<div class="topbar"><div class="topbar-in">
+  <a class="back" href="/" aria-label="Back to reports"><svg width="18" height="22" viewBox="0 0 18 22" fill="none" stroke="#fff" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 3 5 11l8 8"/></svg></a>
+  <h1>Trends</h1>
+</div></div>
+<main>
+  <div id="notices"></div>
+
+  <h2>Night by night</h2>
+  <p class="sub" id="seriesSub"></p>
+  <div class="legend"><span><i class="dot"></i>each night</span><span><i></i>rolling 14-night median</span><span><i style="background:#8f91b0"></i>rolling 7-night median</span></div>
+  <div class="grid" id="series"></div>
+
+  <h2>How often is a night above the usual cut-offs?</h2>
+  <p class="sub">Share of full nights with this many oxygen drops per hour. 5 / 15 / 30 per hour are the conventional mild / moderate / severe boundaries, borrowed from sleep-lab scoring – a ring reads differently, so treat these as orientation.</p>
+  <div class="card scroll"><table id="thresholds"><thead><tr><th>Drops per hour</th><th>nights with drops ≥3 %</th><th>nights with drops ≥4 %</th></tr></thead><caption id="thrCaption" style="caption-side:bottom;text-align:left;color:var(--muted);font-size:12.5px;padding-top:8px"></caption><tbody></tbody></table></div>
+
+  <h2>Tags: nights with vs. without</h2>
+  <p class="sub" id="tagSub"></p>
+  <div class="card scroll"><table id="tagTable"></table></div>
+
+  <h2>All full nights</h2>
+  <div class="card scroll"><table id="nights"></table></div>
+
+  <p class="foot">Medians, not single nights: oxygen-drop counts vary by about ±4 per hour from one night to the next, and one night misclassifies severity 20–50 % of the time; accuracy levels off at about 14 nights. A consumer ring is accurate to about ±2–3 % SpO2. Nothing here is a diagnosis.</p>
+</main>
+<!--FOOTER-->
+<script>
+const T = /*TRENDS_DATA*/null;
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const day = s => { const [d] = s.split(/[ T]/), [y, m, dd] = d.split("-"); return `${MONTHS[m - 1]} ${Number(dd)}`; };
+const fmt = (v, digits) => v == null ? "--" : Number(v).toFixed(digits);
+const N = T.nights.length;
+
+const notices = [];
+T.prompts.forEach(p => notices.push(`<div class="notice">${esc(p)}</div>`));
+if (!T.baseline.ready) notices.push(`<div class="notice info">Learning your baseline: ${N} of ${T.baseline.needed + 1} full nights recorded. Until then, per-night “typical for you” flags stay off and the medians below are provisional.<div class="progress"><div style="width:${Math.min(100, 100 * N / (T.baseline.needed + 1))}%"></div></div></div>`);
+if (T.excluded) notices.push(`<div class="notice info">${T.excluded} recording${T.excluded > 1 ? "s" : ""} shorter than ${T.min_hours} hours ${T.excluded > 1 ? "are" : "is"} left out of everything on this page.</div>`);
+$("notices").innerHTML = notices.join("");
+$("seriesSub").textContent = N ? `${N} full night${N > 1 ? "s" : ""}, ${day(T.nights[0].start)} – ${day(T.nights[N - 1].start)}. The headline number is the median of the last ${Math.min(14, N)}.` : "No full nights yet.";
+
+$("series").innerHTML = T.series.map((m, k) => `<div class="card m"><div class="k">${esc(m.label)}</div>
+  <div class="n">${fmt(m.summary.median14, m.digits)}<small>${esc(m.unit)}</small></div>
+  <div class="s">middle half ${fmt(m.summary.p25, m.digits)}–${fmt(m.summary.p75, m.digits)} · best ${fmt(m.summary.best, m.digits)} · worst ${fmt(m.summary.worst, m.digits)}</div>
+  <canvas data-k="${k}" role="img" aria-label="${esc(m.label)} per night"></canvas></div>`).join("");
+
+function draw(cv) {
+  const m = T.series[cv.dataset.k], dpr = devicePixelRatio || 1, W = cv.clientWidth, H = cv.clientHeight;
+  cv.width = W * dpr; cv.height = H * dpr;
+  const g = cv.getContext("2d"); g.scale(dpr, dpr);
+  const vals = m.values.filter(v => v != null);
+  if (!vals.length) return;
+  let lo = Math.min(...vals), hi = Math.max(...vals);
+  if (m.worse === "up" && lo < hi * .5) lo = 0;   // rates start at zero; a steady 60-odd bpm pulse should not be flattened by it
+  if (hi - lo < 1e-9) { hi += 1; lo = Math.max(0, lo - 1); }
+  const pad = (hi - lo) * .12; hi += pad; if (lo !== 0) lo -= pad;
+  const L = 34, R = 6, Tp = 6, B = 18, X = i => L + (N > 1 ? i / (N - 1) : .5) * (W - L - R), Y = v => H - B - (v - lo) / (hi - lo) * (H - Tp - B);
+  g.font = "11px Poppins, system-ui, sans-serif"; g.fillStyle = "#a5a7bc"; g.strokeStyle = "rgba(255,255,255,.12)"; g.textBaseline = "middle"; g.textAlign = "right";
+  [lo, (lo + hi) / 2, hi].forEach(v => { const y = Math.round(Y(v)) + .5; g.beginPath(); g.moveTo(L, y); g.lineTo(W - R, y); g.stroke(); g.fillText(v.toFixed(hi - lo < 1 ? 2 : hi - lo < 5 ? 1 : 0), L - 5, y); });
+  g.textBaseline = "alphabetic"; g.textAlign = "left"; g.fillText(day(T.nights[0].start), L, H - 3);
+  if (N > 1) { g.textAlign = "right"; g.fillText(day(T.nights[N - 1].start), W - R, H - 3); }
+  const line = (arr, color, width) => { g.strokeStyle = color; g.lineWidth = width; g.beginPath(); let pen = false;
+    arr.forEach((v, i) => { if (v == null) { pen = false; return; } pen ? g.lineTo(X(i), Y(v)) : g.moveTo(X(i), Y(v)); pen = true; }); g.stroke(); };
+  if (N > 1) { line(m.roll7, "#8f91b0", 1.2); line(m.roll14, "#fe5000", 2.2); }
+  g.fillStyle = "#6eb3ff"; m.values.forEach((v, i) => { if (v == null) return; g.beginPath(); g.arc(X(i), Y(v), N > 60 ? 1.8 : 3, 0, 7); g.fill(); });
+}
+const drawAll = () => document.querySelectorAll("canvas").forEach(draw);
+new ResizeObserver(drawAll).observe($("series")); if (document.fonts && document.fonts.ready) document.fonts.ready.then(drawAll); drawAll();
+
+$("thrCaption").textContent = `Based on ${N} full night${N === 1 ? "" : "s"}.` + (N < 7 ? " Too few to read anything into yet – aim for at least 14." : "");
+$("thresholds").querySelector("tbody").innerHTML = T.thresholds.map(r => `<tr><td>${r.thr} or more</td><td>${r.odi3 == null ? "--" : r.odi3 + "%"}</td><td>${r.odi4 == null ? "--" : r.odi4 + "%"}</td></tr>`).join("");
+
+const cols = T.series.slice(0, 7);
+$("tagSub").textContent = `Median on nights with each tag minus nights without. With night-to-night swings of about ±4 drops/hour, fewer than ${T.tag_arm_min} nights on each side can only show very large effects – and tags often travel together (weekend, alcohol, late meal). Alternate on/off nights where you can.`;
+$("tagTable").innerHTML = T.tags.length ? `<thead><tr><th>Tag</th><th>nights</th>${cols.map(m => `<th>${esc(m.label)}</th>`).join("")}</tr></thead><tbody>` +
+  T.tags.map(t => `<tr><td><span class="tagname">${esc(t.tag)}</span>${t.enough ? "" : `<span class="pill">too few nights</span>`}</td><td>${t.n_with} / ${t.n_without}</td>` +
+    t.metrics.map((x, k) => { if (x.diff == null) return `<td class="dim">--</td>`; const worse = cols[k].worse === "up" ? x.diff > 0 : x.diff < 0;
+      return `<td class="${!t.enough || x.diff === 0 ? "dim" : worse ? "worse" : "better"}" title="with ${x.with} · without ${x.without}">${x.diff > 0 ? "+" : ""}${x.diff}</td>`; }).join("") + `</tr>`).join("") + `</tbody>`
+  : `<tbody><tr><td class="dim">No tagged nights yet – add tags at the bottom of a night's report.</td></tr></tbody>`;
+
+$("nights").innerHTML = `<thead><tr><th>Night</th><th>hours</th>${cols.map(m => `<th>${esc(m.label)}</th>`).join("")}<th>Tags</th></tr></thead><tbody>` +
+  T.nights.map((n, i) => `<tr><td><a href="/report/${n.id}">${day(n.start)}</a></td><td>${fmt(n.hours, 1)}</td>${cols.map(m => `<td>${fmt(m.values[i], m.digits)}</td>`).join("")}<td>${n.tags.map(esc).join(", ")}</td></tr>`).reverse().join("") + `</tbody>`;
+</script>
+</body>
+</html>

@@ -1,0 +1,549 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>O2Ring Report</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Lato:wght@700;900&family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #1c2431;
+  --card: #343c4a;
+  --bar: #343c4a;
+  --title: #ffffff;
+  --subtitle: #d9d9d9;
+  --muted: #a5a7bc;
+  --accent: #fe5000;
+  --grid: rgba(255, 255, 255, .31);
+  --border: #9ea0a1;
+  --heading: "Lato", system-ui, sans-serif;
+  --body: "Poppins", system-ui, sans-serif;
+}
+* { box-sizing: border-box; }
+html { background: var(--bg); }
+body { margin: 0; color: var(--title); font-family: var(--body); -webkit-font-smoothing: antialiased; }
+.topbar { position: sticky; top: 0; z-index: 5; background: var(--bar); }
+.topbar-in { max-width: 540px; margin: 0 auto; display: flex; align-items: center; padding: 14px 24px; }
+.topbar h1 { flex: 1; margin: 0; text-align: center; font: 900 30px var(--heading); letter-spacing: .2px; }
+.back { width: 40px; height: 40px; border-radius: 50%; background: var(--accent); display: grid; place-items: center; }
+.icons { display: flex; gap: 10px; align-items: center; }
+.icons button { background: none; border: 0; padding: 0; color: #fff; cursor: pointer; display: grid; }
+.icons .dim { color: #7d8290; cursor: default; }
+main { max-width: 540px; margin: 0 auto; padding: 28px 22px 48px; }
+.card { background: var(--card); border-radius: 10px; margin-bottom: 22px; }
+.charts { padding: 18px 24px 22px 6px; }
+.when { text-align: center; font: 700 21px var(--heading); margin: 0 0 8px; padding-left: 18px; }
+.chart-head { display: flex; justify-content: space-between; align-items: baseline; padding: 22px 0 2px 42px; }
+.chart-head h2 { margin: 0; font: 900 24px var(--heading); }
+.avg { color: var(--accent); font: 500 24px var(--body); }
+.avg small { font-size: 17px; }
+.chart { position: relative; height: 205px; }
+.chart.motion { height: 150px; }
+.chart canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.tip { position: absolute; top: 4px; pointer-events: none; background: rgba(20, 23, 32, .92); border: 1px solid var(--accent);
+  border-radius: 6px; padding: 3px 8px; font-size: 12px; white-space: nowrap; display: none; z-index: 2; }
+.info { padding: 16px 8px 14px 9px; }
+.row { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 3px 0; font-size: 20px; letter-spacing: .4px; }
+.row .v { font-weight: 600; color: var(--subtitle); text-align: right; }
+.score { display: flex; align-items: center; flex: 1; justify-content: flex-start; gap: 54px; padding-left: 60px; }
+.scorebar { position: relative; width: 72px; height: 17px; border-radius: 9px; flex: none;
+  background: linear-gradient(90deg, #ff0101 0%, #fe7f01 20%, #ffee02 43%, #fef900 50%, #9aff01 75%, #00fd00 100%); }
+.scorebar svg { position: absolute; top: 9px; width: 12px; height: 18px; margin-left: -6px; }
+.odi { display: flex; gap: 22px; align-items: center; border: 1px solid rgba(217, 217, 217, .2); background: rgba(217, 217, 217, .08); border-radius: 12px;
+  padding: 16px 18px; margin: 14px 0 12px; }
+.odi svg { flex: none; color: var(--subtitle); }
+.odi b { display: block; font-weight: 600; font-size: 17px; }
+.odi span { color: #cfd2da; font-size: 16px; letter-spacing: .5px; }
+.odi-grid { width: 100%; }
+.odi-grid .row { font-size: 17px; }
+.odi-rows { margin: 0; } .odi-rows .row { padding: 3px 0; }
+.odi-note { color: var(--muted); font-size: 12.5px; line-height: 1.5; margin: 6px 0 8px; }
+.parts { text-align: center; color: var(--muted); font-size: 12.5px; line-height: 1.5; margin: 0 0 4px; padding: 0 12px 0 30px; }
+.warn { color: #ff9800; font-size: 15px; padding: 4px 0 2px; }
+h3 { font: 700 23px var(--heading); margin: 30px 0 14px; }
+table { width: 100%; border-collapse: collapse; text-align: center; font-size: 21px; font-weight: 500; letter-spacing: .4px; }
+.tcard { padding: 12px 8px 18px; }
+th { font-weight: 600; font-size: 22px; padding: 6px 2px 16px; line-height: 1.35; }
+td { padding: 1px 2px; color: var(--subtitle); }
+.notes textarea { width: 100%; height: 78px; resize: vertical; background: transparent; border: 1.5px solid var(--accent);
+  border-radius: 6px; color: #fff; font: 400 21px var(--body); letter-spacing: .6px; padding: 22px 20px; }
+.notes textarea::placeholder { color: var(--muted); text-transform: capitalize; }
+.notes textarea:focus { outline: none; box-shadow: 0 0 0 2px rgba(255, 90, 10, .35); }
+#noteStatus { margin-right: 12px; color: var(--muted); }
+#noteStatus.err { color: #ff7068; }
+.count { text-align: right; font-size: 16px; color: var(--subtitle); margin-top: 6px; }
+.disclaimer { color: var(--subtitle); font-size: 16.5px; line-height: 2.05; letter-spacing: .5px; }
+.disclaimer b { font-weight: 500; font-size: 18px; }
+.disclaimer p { margin: 0 0 14px; }
+.source { text-align: center; font: 700 17px var(--heading); margin-top: 22px; }
+
+/* ---------- insights (beyond the app) ---------- */
+.ins-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 34px 0 6px; }
+.ins-head h3 { margin: 0; }
+.ins-head a { color: var(--accent); font-size: 14px; text-decoration: none; white-space: nowrap; }
+.ins-sub { color: var(--muted); font-size: 13.5px; margin: 0 0 14px; line-height: 1.5; }
+.tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 22px; }
+.tile { background: var(--card); border-radius: 10px; padding: 12px 14px 13px; min-width: 0; }
+.tile .k { color: var(--subtitle); font-size: 13px; letter-spacing: .3px; }
+.tile .n { font: 600 26px var(--body); margin: 2px 0 1px; white-space: nowrap; }
+.tile .n small { font-size: 14px; font-weight: 400; color: var(--subtitle); margin-left: 3px; }
+.tile .s { color: var(--muted); font-size: 12.5px; line-height: 1.45; }
+.chip { display: inline-block; margin-top: 6px; padding: 1px 8px; border-radius: 10px; font-size: 11.5px; border: 1px solid #5b6670; color: var(--subtitle); }
+.chip.up { border-color: #ff9800; color: #ffb74d; } .chip.down { border-color: #34c759; color: #7fe39a; } .chip.strong { font-weight: 600; }
+.icard { padding: 14px 16px 16px; }
+.icard h4 { margin: 0 0 4px; font: 700 17px var(--heading); }
+.icard p { margin: 0 0 12px; color: var(--muted); font-size: 12.5px; line-height: 1.5; }
+.hours { display: flex; align-items: flex-end; gap: 5px; height: 110px; }
+.hours .col { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; align-items: stretch; height: 100%; min-width: 0; }
+.hours .bar { border-radius: 3px 3px 0 0; min-height: 0; }
+.hours .bar.c { background: #6eb3ff; border-radius: 0; } .hours .bar.ab { background: var(--accent); }
+.hours .col span { text-align: center; font-size: 11px; color: var(--subtitle); }
+.hours .col .cnt { color: var(--title); font-size: 11.5px; padding-bottom: 2px; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 10px; color: var(--subtitle); font-size: 12px; }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+.chart-legend { padding: 2px 0 0 42px; margin: 0; }
+table.small { font-size: 14.5px; letter-spacing: 0; } table.small th { font-size: 13px; padding: 4px 2px 8px; color: var(--subtitle); font-weight: 500; }
+table.small td:first-child, table.small th:first-child { text-align: left; }
+table.small td { padding: 3px 2px; }
+.strip { display: flex; height: 22px; border-radius: 4px; overflow: hidden; background: #1c2431; }
+.strip div { min-width: 0; }
+.strip .s { background: #4a6fa5; } .strip .w { background: #ff9800; } .strip .o { background: #2a3140; } .strip .c { background: var(--accent); }
+.strip-ends { display: flex; justify-content: space-between; color: var(--subtitle); font-size: 11.5px; margin: 4px 0 10px; }
+.facts { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 16px; font-size: 13.5px; color: var(--subtitle); }
+.facts b { color: #fff; font-weight: 600; }
+.tags { display: flex; flex-wrap: wrap; gap: 8px; }
+.tag { background: transparent; color: var(--subtitle); border: 1px solid #5b6670; border-radius: 16px; padding: 5px 12px; font: 400 13.5px var(--body); cursor: pointer; }
+.tag[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+.tag:focus-visible, .tagadd input:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.tagadd { display: flex; gap: 8px; margin-top: 12px; }
+.tagadd input { flex: 1; min-width: 0; background: transparent; border: 1px solid #5b6670; border-radius: 6px; color: #fff; font: 400 14px var(--body); padding: 7px 10px; }
+.tagadd button { background: var(--accent); color: #fff; border: 0; border-radius: 6px; padding: 0 16px; font: 600 14px var(--body); cursor: pointer; }
+details.defs { color: var(--muted); font-size: 12.5px; line-height: 1.6; margin: 4px 0 8px; }
+details.defs summary { cursor: pointer; color: var(--subtitle); font-size: 13.5px; padding: 6px 0; }
+details.defs dt { color: var(--subtitle); margin-top: 8px; } details.defs dd { margin: 0; }
+.caution { border-left: 3px solid #ff9800; padding: 8px 12px; background: rgba(255, 152, 0, .08); color: var(--subtitle); font-size: 13px; line-height: 1.55; border-radius: 0 6px 6px 0; margin-bottom: 22px; }
+@media (max-width: 380px) { .tiles { grid-template-columns: 1fr; } }
+@media (max-width: 480px) {
+  main { padding: 18px 12px 40px; }
+  .topbar h1 { font-size: 24px; }
+  .row, table { font-size: 16px; } th { font-size: 17px; }
+  .chart-head h2, .avg { font-size: 20px; } .when { font-size: 17px; }
+  .score { padding-left: 20px; gap: 24px; }
+}
+@media print { .topbar { position: static; } .icons, .back, .notes .count { visibility: hidden; } }
+</style>
+</head>
+<body>
+<div class="topbar"><div class="topbar-in">
+  <a class="back" id="back" href="index.html" aria-label="Back to reports">
+    <svg width="18" height="22" viewBox="0 0 18 22" fill="none" stroke="#fff" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 3 5 11l8 8"/></svg>
+  </a>
+  <h1>Report Details</h1>
+  <div class="icons">
+    <span class="dim" aria-hidden="true"><svg width="32" height="32" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><circle cx="16" cy="16" r="13.5"/><path d="M12 12.5a4 4 0 1 1 5.6 3.7c-1 .5-1.6 1.2-1.6 2.3" stroke-linecap="round"/><circle cx="16" cy="22.5" r="1" fill="currentColor"/></svg></span>
+    <button id="share" title="Print / save as PDF" aria-label="Print or save as PDF"><svg width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6"/><path d="M17 3h8v8M25 3 13 15"/></svg></button>
+  </div>
+</div></div>
+
+<main>
+  <section class="card charts">
+    <p class="when" id="when"></p>
+
+    <div class="chart-head"><h2>Oxygen Level</h2><span class="avg" id="avgSpo2"></span></div>
+    <div class="chart" data-chart="spo2"><canvas></canvas><div class="tip"></div></div>
+    <div class="legend chart-legend" id="dropLegend" hidden><span><i style="background:var(--accent)"></i>drop with pulse surge</span><span><i style="background:#cfd6e4"></i>drop only</span><span>tall = 4 % or more</span></div>
+
+    <div class="chart-head"><h2>Pulse Rate</h2><span class="avg" id="avgPr"></span></div>
+    <div class="chart" data-chart="pr"><canvas></canvas><div class="tip"></div></div>
+
+    <div class="chart-head"><h2>Body Movement</h2></div>
+    <div class="chart motion" data-chart="motion"><canvas></canvas><div class="tip"></div></div>
+  </section>
+
+  <section class="card info">
+    <div class="row"><span>Start Time</span><span class="v" id="startTime"></span></div>
+    <div class="row"><span>Measurement Time</span><span class="v" id="measTime"></span></div>
+    <div class="row"><span>O2 Score</span>
+      <span class="score"><span class="scorebar" id="scorebar"><svg viewBox="0 0 12 18"><path d="M6 0C6 5 0 8 0 12.5a6 6 0 0 0 12 0C12 8 6 5 6 0Z" fill="#000"/></svg></span>
+      <span class="v" id="score"></span></span></div>
+    <div class="row"><span>Detected Sleep</span><span class="v" id="sleep"></span></div>
+    <div class="odi" id="odi"></div>
+    <div class="row"><span>Oxygen Level Range</span><span class="v" id="spo2Range"></span></div>
+    <div class="row"><span>Pulse Rate Range</span><span class="v" id="prRange"></span></div>
+  </section>
+
+
+  <section id="insights" hidden>
+    <div class="ins-head"><h3>Insights</h3><a id="trendsLink" href="#" hidden>All nights &amp; trends →</a></div>
+    <p class="ins-sub" id="insSub"></p>
+    <div class="caution" id="insCaution" hidden></div>
+    <div class="tiles" id="tiles"></div>
+
+    <section class="card icard">
+      <h4>Oxygen drops by hour of night</h4>
+      <p>Drops of 3 % or more. “With pulse surge” means the drop was followed by a pulse rise of ≥6 bpm – a sign it was a real event that disturbed sleep rather than measurement noise.</p>
+      <div class="hours" id="hours" role="img"></div>
+      <div class="legend"><span><i style="background:var(--accent)"></i>with pulse surge</span><span><i style="background:#6eb3ff"></i>drop only</span></div>
+    </section>
+
+    <section class="card icard" id="cycleCard" hidden>
+      <h4>Repeating drop cycles</h4>
+      <p>Stretches where oxygen rises and falls in a regular 30–70 second rhythm – the signature of breathing events repeating back to back, rather than isolated dips. A pattern indicator only: a ring cannot tell what kind of event it is.</p>
+      <div class="strip" id="cycleStrip" role="img"></div>
+      <div class="strip-ends"><span id="cycleFrom"></span><span id="cycleTo"></span></div>
+      <div class="facts" id="cycleFacts"></div>
+      <div class="legend"><span><i style="background:var(--accent)"></i>regular cycling</span><span><i style="background:#1c2431;outline:1px solid #5b6670"></i>none</span></div>
+    </section>
+
+    <section class="card icard" id="sleepCard" hidden>
+      <h4>Estimated sleep window</h4>
+      <p>Estimated from movement alone, so treat it as a rough guide: a still, awake person looks asleep, the ring's motion scale is uncalibrated, and this kind of estimate is known to overstate sleep. Best used to compare your own nights.</p>
+      <div class="strip" id="sleepStrip" role="img"></div>
+      <div class="strip-ends"><span id="sleepFrom"></span><span id="sleepTo"></span></div>
+      <div class="facts" id="sleepFacts"></div>
+      <div class="legend"><span><i style="background:#4a6fa5"></i>quiet</span><span><i style="background:#ff9800"></i>restless / wake-like</span><span><i style="background:#2a3140"></i>outside sleep window</span></div>
+    </section>
+
+    <section class="card icard">
+      <h4>Drops by depth and length</h4>
+      <table class="small" id="depthTable"><thead><tr><th>Depth</th><th>&lt;30 s</th><th>30–60 s</th><th>&gt;60 s</th><th>All</th></tr></thead><tbody></tbody></table>
+    </section>
+
+    <section class="card icard">
+      <h4>Time below oxygen levels</h4>
+      <table class="small" id="belowTable"><thead><tr><th>SpO2</th><th>Time</th><th>% of night</th></tr></thead><tbody></tbody></table>
+    </section>
+
+    <section class="card icard" id="tagCard" hidden>
+      <h4>Tags for this night</h4>
+      <p>Tag what was different so nights can be compared on the trends page. <span id="tagStatus" role="status"></span></p>
+      <div class="tags" id="tags"></div>
+      <form class="tagadd" id="tagAdd"><input id="tagNew" maxlength="40" placeholder="Add a tag" aria-label="New tag"><button type="submit">Add</button></form>
+    </section>
+
+    <details class="defs"><summary>How these numbers are defined</summary><dl id="defs"></dl></details>
+  </section>
+
+  <h3>Oxygen Level Distribution</h3>
+  <section class="card tcard"><table id="spo2Dist">
+    <thead><tr><th>Range</th><th>Duration</th><th>%Total</th><th>Drops<br>(ODI4%)</th></tr></thead><tbody></tbody></table></section>
+
+  <h3>Pulse Rate Distribution</h3>
+  <section class="card tcard"><table id="prDist">
+    <thead><tr><th>Range</th><th>Duration</th><th>%Total</th></tr></thead><tbody></tbody></table></section>
+
+  <section class="notes">
+    <h3>Add Notes</h3>
+    <textarea id="notes" maxlength="200" placeholder="Enter to add notes"></textarea>
+    <div class="count"><span id="noteStatus" role="status"></span><span id="noteCount">0</span>/200</div>
+  </section>
+
+  <section class="disclaimer">
+    <p><b>Please note</b><br>Everything on this page is calculated from the readings of a consumer finger oximeter, which is accurate to about ±2–3 %. The drop counts and ODI figures are informational, meant for following your own nights over time.</p>
+    <p>None of it is a diagnosis, and a quiet-looking night does not rule anything out. If your sleep, breathing or daytime tiredness worries you, take it up with a doctor.</p>
+  </section>
+  <div class="source" id="source"></div>
+</main>
+<!--FOOTER-->
+
+<script>
+const R = /*REPORT_DATA*/null;
+
+const $ = id => document.getElementById(id);
+const start = new Date(R.start), end = new Date(R.end);
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const p2 = n => String(n).padStart(2, "0");
+const clock = (d, sep = " ") => `${p2(d.getHours() % 12 || 12)}:${p2(d.getMinutes())}${sep}${d.getHours() < 12 ? "AM" : "PM"}`;
+const dateStr = d => `${MONTHS[d.getMonth()]} ${p2(d.getDate())} ${d.getFullYear()}`;
+const hms = s => `${p2(Math.floor(s / 3600))}:${p2(Math.floor(s % 3600 / 60))}:${p2(Math.floor(s % 60))}`;
+
+document.title = `O2Ring Report – ${dateStr(start)}`;
+$("when").textContent = `${dateStr(start)}, ${clock(start)} - ${clock(end)}`;
+$("avgSpo2").innerHTML = R.avg_spo2 == null ? "" : `<small>Avg.</small>${R.avg_spo2}%`;
+$("avgPr").innerHTML = R.avg_pr == null ? "" : `<small>Avg.</small>${R.avg_pr}/min`;
+$("startTime").textContent = `${dateStr(start)}, ${clock(start)}`;
+$("measTime").textContent = R.measurement_time;
+$("spo2Range").textContent = R.spo2_range ? `${R.spo2_range[0]}-${R.spo2_range[1]} %` : "--";
+$("prRange").textContent = R.pr_range ? `${R.pr_range[0]}-${R.pr_range[1]} /min` : "--";
+$("source").textContent = `Data Sources ${R.device}`;
+
+$("score").textContent = R.o2_score == null ? "--" : R.o2_score.toFixed(1);
+if (R.o2_score >= 1 && R.o2_score <= 10) $("scorebar").querySelector("svg").style.left = `${R.o2_score * 9.5}%`;
+else $("scorebar").querySelector("svg").style.display = "none";
+
+const infoIcon = `<svg width="30" height="30" viewBox="0 0 30 30" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="15" cy="15" r="12.5"/><path d="M15 13.5v8" stroke-linecap="round" stroke-width="2.4"/><circle cx="15" cy="9.3" r="1.5" fill="currentColor" stroke="none"/></svg>`;
+// Detected sleep + the app's ten ODI rows. The app (v. Sept 2026) shows "Coming Soon" for all of them; here they are
+// computed from the raw samples by o2ring_analytics (definitions at the bottom of the Insights section).
+const INS = R.insights && !R.insights.too_short ? R.insights : null, est = INS && INS.sleep_estimate;
+$("sleep").textContent = R.asleep_s > 0 ? hms(R.asleep_s)
+  : est && est.found && !INS.short ? `≈ ${Math.floor(est.quiet_h)} h ${p2(Math.round(est.quiet_h % 1 * 60))} (estimate)` : "Not Available";
+if (INS && INS.desaturations.odi_rows) {
+  const row = (l, v) => `<div class="row"><span>${l}</span><span class="v">${v}</span></div>`;
+  $("odi").className = "odi-rows";
+  $("odi").innerHTML = [4, 3].map(d => { const o = INS.desaturations.odi_rows[d];
+    return row(`ODI ${d}%`, `${o.index ?? "--"} /h`) + row(`Total ODI ${d}% Drops`, o.drops) + row(`Time in ODI ${d}% Drops`, hms(o.time_in_drops_s)) +
+      row(`% Time in ODI ${d}% Drops`, `${o.pct_time_in_drops ?? "--"}%`) + row(`Avg ODI ${d}% Duration`, hms(o.avg_duration_s)); }).join("") +
+    `<div class="odi-note">ODI rows are calculated by this tool from the raw samples – the app still shows “Coming Soon”. The ring's own count: ${R.drops_3pct ?? "--"} drops ≥3 %, ${R.drops_4pct ?? "--"} ≥4 %.</div>`;
+} else {
+  $("odi").innerHTML = `${infoIcon}<div><b>ODI 3% &amp; 4% Metrics</b><span>Not available for this recording</span></div>`;
+}
+if (R.measured_s > 0 && R.measured_s < 14400)
+  $("odi").insertAdjacentHTML("afterend", `<div class="warn">⚠ Short recording — interpret with caution</div>`);
+if (R.parts && R.parts.length > 1) {
+  const gaps = R.parts.slice(1).map((p, k) => Math.round((new Date(p.start) - new Date(R.parts[k].end)) / 60000));
+  $("when").insertAdjacentHTML("afterend", `<p class="parts">Combined from ${R.parts.length} recordings: ${R.parts.map(p => `${clock(new Date(p.start))}–${clock(new Date(p.end))}`).join(", ")} · gaps ${gaps.map(g => g + " min").join(", ")}. O2 Score is the time-weighted average of the parts.</p>`);
+}
+
+const fill = (id, rows, cols) => $(id).querySelector("tbody").innerHTML =
+  rows.map(r => `<tr>${cols.map(c => `<td>${r[c]}</td>`).join("")}</tr>`).join("");
+const byRange = INS && INS.desaturations.drops4_by_range;
+fill("spo2Dist", R.spo2_dist.map((r, k) => ({ ...r, drops: byRange ? byRange[k] : "--" })), ["range", "duration", "pct", "drops"]);
+fill("prDist", R.pr_dist, ["range", "duration", "pct"]);
+
+if (R.index_url) $("back").href = R.index_url;
+
+// Notes: saved to the database when served by server.js (R.notes_url), otherwise kept in this browser only.
+const notesKey = `o2ring-notes-${R.file_name}`, status = $("noteStatus");
+let saveTimer = null, saved = R.notes || "";
+const setStatus = (text, err) => { status.textContent = text; status.classList.toggle("err", !!err); };
+async function saveNotes() {
+  const notes = $("notes").value;
+  if (notes === saved) return;
+  setStatus("Saving…");
+  try {
+    const res = await fetch(R.notes_url, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ notes }), keepalive: true });
+    if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || res.statusText);
+    saved = notes;
+    setStatus($("notes").value === saved ? "Saved" : "Saving…");
+  } catch (e) { setStatus(`Not saved – ${e.message}`, true); }
+}
+if (R.notes_url) $("notes").value = saved;
+else try { $("notes").value = localStorage.getItem(notesKey) || ""; } catch (e) {}
+$("noteCount").textContent = $("notes").value.length;
+$("notes").addEventListener("input", () => {
+  $("noteCount").textContent = $("notes").value.length;
+  if (!R.notes_url) { try { localStorage.setItem(notesKey, $("notes").value); } catch (e) {} return; }
+  clearTimeout(saveTimer); saveTimer = setTimeout(saveNotes, 700);
+});
+if (R.notes_url) {
+  $("notes").addEventListener("blur", () => { clearTimeout(saveTimer); saveNotes(); });
+  addEventListener("pagehide", () => { clearTimeout(saveTimer); saveNotes(); });
+}
+$("share").addEventListener("click", () => window.print());
+
+
+/* ---------- insights ---------- */
+const I = R.insights, EVENTS = (I && I.events) || [];
+const mmss = s => s >= 3600 ? hms(s) : `${Math.floor(s / 60)}:${p2(s % 60)}`;
+const escHtml = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+function renderInsights() {
+  if (!I || I.too_short) return;
+  $("insights").hidden = false;
+  const s = I.spo2, d = I.desaturations, p = I.pulse, m = I.movement, tb = s.time_below;
+  const ringRate = k => R.measured_s > 0 && R[k] != null ? (R[k] / (R.measured_s / 3600)).toFixed(1) : "--";
+  $("insSub").textContent = `Calculated from the raw 4-second samples, beyond what the app shows · ${I.valid_hours} h analysed (${I.valid_pct}% valid)`;
+  if (I.short) { $("insCaution").hidden = false; $("insCaution").textContent = "Recording shorter than 4 hours: per-hour rates are not meaningful and this night is left out of trends and baselines."; }
+  if (R.trends_url) { $("trendsLink").hidden = false; $("trendsLink").href = R.trends_url; }
+
+  const flag = key => {           // personal-baseline chip, only when served with history
+    const f = R.baseline && R.baseline.flags && R.baseline.flags[key];
+    if (!f) return "";
+    if (Math.abs(f.z) < 2) return `<span class="chip">typical for you</span>`;
+    const worse = f.worse;
+    return `<span class="chip ${worse ? "up" : "down"} ${Math.abs(f.z) >= 3 ? "strong" : ""}">${f.z > 0 ? "higher" : "lower"} than your usual ${f.median}</span>`;
+  };
+  const tile = (k, n, unit, sub, key) => `<div class="tile"><div class="k">${k}</div><div class="n">${n}<small>${unit}</small></div><div class="s">${sub}</div>${key ? flag(key) : ""}</div>`;
+  const at = p && p.lowest_30min_at_h != null ? clock(new Date(start.getTime() + p.lowest_30min_at_h * 3600e3)) : "";
+  const tiles = [
+    tile("Time below 90 %", mmss(tb["90"].seconds), ` (${tb["90"].pct}%)`, `below 88 %: ${mmss(tb["88"].seconds)} · longest run ${I.spo2.longest_below_90_s} s`, "t90_pct"),
+    tile("Hypoxic burden", d.hypoxic_burden, " %·min/h", `depth × length of all drops · ${d.pct_time_in_events}% of night in a drop`, "hypoxic_burden"),
+    tile("Drops ≥3 % per hour", d.odi3, ` (${d.count3})`, `ring's own count: ${ringRate("drops_3pct")}/h · ${d.motion_suspect} possibly motion`, "odi3"),
+    tile("Drops ≥4 % per hour", d.odi4, ` (${d.count4})`, `ring's own count: ${ringRate("drops_4pct")}/h · deepest ${d.deepest}%`, "odi4"),
+    tile("Drops with pulse surge", d.arousal_linked_per_h, " /h", `${d.arousal_linked_pct ?? "--"}% of drops · with movement ${d.classes.A}, without ${d.classes.B}, drop only ${d.classes.C}`, "arousal_linked_h"),
+    tile("Oxygen baseline", s.baseline, " %", `mean ${s.mean}% · 1st percentile ${s.nadir_p1}% · variability ${s.delta_index ?? "--"}`, "mean_spo2"),
+  ];
+  if (p) tiles.push(
+    tile("Sleeping pulse", p.lowest_30min ?? "--", " bpm", p.lowest_30min == null ? "needs 30 minutes of data" : `lowest 30 min, around ${at} · lowest 5 min ${p.lowest_5min} · curve: ${p.curve_shape}`, "lowest_pr_30min"),
+    tile("Pulse surges ≥6 bpm", p.rises6_per_h, " /h", `≥10 bpm: ${p.rises10_per_h}/h` + (d.pulse_response ? ` · response to drops ${d.pulse_response.bpm} bpm` : "") +
+      (p.tachycardia.length + p.bradycardia.length ? ` · ${p.tachycardia.length} fast / ${p.bradycardia.length} slow episodes` : ""), "pr_rises6_h"));
+  tiles.push(tile("Movement", m.bouts_per_h, " bouts/h", `${m.major_movements} major · longest still ${m.longest_still_min} min · fragmentation ${m.fragmentation_index}`, "movement_bouts_h"));
+  if (R.baseline && R.baseline.learning) tiles.push(tile("Your baseline", `${R.baseline.nights}/${R.baseline.needed}`, " nights", "Learning what is normal for you. Each tile will say whether a night is typical once there are enough full nights.", null));
+  $("tiles").innerHTML = tiles.join("");
+
+  // events per hour, split by pulse surge
+  const hoursN = d.per_hour.length, ab = Array(hoursN).fill(0);
+  EVENTS.forEach(e => { if (e[4] !== "C") ab[Math.min(hoursN - 1, Math.floor(e[0] * R.interval_s / 3600))]++; });
+  const peak = Math.max(1, ...d.per_hour);
+  $("hours").setAttribute("aria-label", `Drops per hour of night: ${d.per_hour.join(", ")}`);
+  $("hours").innerHTML = d.per_hour.map((cnt, h) => {
+    const label = clock(new Date(start.getTime() + h * 3600e3), "").replace(/:\d\d/, "").toLowerCase();
+    return `<div class="col" title="${cnt} drops, ${ab[h]} with pulse surge"><span class="cnt">${cnt || ""}</span>` +
+      `<div class="bar ab" style="height:${ab[h] / peak * 78}%"></div><div class="bar c" style="height:${(cnt - ab[h]) / peak * 78}%"></div><span>${label}</span></div>`;
+  }).join("");
+
+  // run-length encode a one-character-per-step timeline into proportional blocks
+  const strip = (id, timeline, classOf) => {
+    let html = "", i = 0;
+    while (i < timeline.length) { let j = i; while (j < timeline.length && classOf(j) === classOf(i)) j++; html += `<div class="${classOf(i)}" style="flex:${j - i}"></div>`; i = j; }
+    $(id).innerHTML = html;
+  };
+  const clockAt = seconds => clock(new Date(start.getTime() + seconds * 1000));
+  const hm = hoursF => `${Math.floor(hoursF)} h ${p2(Math.round((hoursF % 1) * 60))}`;
+
+  const cyc = I.periodicity;
+  if (cyc && !I.short) {
+    $("cycleCard").hidden = false;
+    strip("cycleStrip", cyc.timeline, k => cyc.timeline[k] === "c" ? "c" : "n");
+    $("cycleStrip").setAttribute("aria-label", `${cyc.cyclic_pct}% of the night showed regular cycling`);
+    $("cycleFrom").textContent = clockAt(0); $("cycleTo").textContent = clockAt(R.duration_s);
+    $("cycleFacts").innerHTML = `<span>Share of night <b>${cyc.cyclic_pct}%</b></span><span>Typical cycle <b>${cyc.typical_cycle_s ? cyc.typical_cycle_s + " s" : "--"}</b></span>` +
+      `<span>Pulse cycling along <b>${cyc.cyclic_with_pulse_pct == null ? "--" : cyc.cyclic_with_pulse_pct + "%"}</b></span><span>Oxygen variation in this rhythm <b>${cyc.band_share_pct}%</b></span>`;
+  }
+  const se = I.sleep_estimate;
+  if (se && se.found && !I.short) {
+    $("sleepCard").hidden = false;
+    strip("sleepStrip", se.timeline, k => k < se.onset_min || k >= se.offset_min ? "o" : se.timeline[k]);
+    $("sleepStrip").setAttribute("aria-label", `Estimated sleep window with ${se.wake_like_min} restless minutes`);
+    $("sleepFrom").textContent = clockAt(0); $("sleepTo").textContent = clockAt(se.timeline.length * 60);
+    $("sleepFacts").innerHTML = `<span>Window <b>${clockAt(se.onset_min * 60)} – ${clockAt(se.offset_min * 60)}</b></span><span>Length <b>${hm(se.window_h)}</b></span>` +
+      `<span>Quiet <b>${hm(se.quiet_h)}</b></span><span>Restless / wake-like <b>${se.wake_like_min} min (${se.wake_like_pct}%)</b></span>` +
+      `<span>Restless spells ≥5 min <b>${se.long_wake_periods}</b></span><span>Longest <b>${se.longest_wake_min} min</b></span>` +
+      `<span>Drops ≥3 % inside window <b>${se.odi3_in_window}/h</b></span><span>Before / after <b>${se.before_sleep_min} / ${se.after_sleep_min} min</b></span>`;
+  }
+
+  const depthLabels = ["3–4 %", "5–9 %", "10–14 %", "≥15 %"];
+  $("depthTable").querySelector("tbody").innerHTML = d.depth_by_duration.map((row, k) =>
+    `<tr><td>${depthLabels[k]}</td>${row.map(v => `<td>${v}</td>`).join("")}<td>${row.reduce((a, b) => a + b, 0)}</td></tr>`).join("");
+  $("belowTable").querySelector("tbody").innerHTML = Object.keys(tb).sort((a, b) => b - a).map(thr =>
+    `<tr><td>below ${thr} %</td><td>${hms(tb[thr].seconds)}</td><td>${tb[thr].pct.toFixed(2)}%</td></tr>`).join("");
+  const names = { valid: "Valid data", desaturation: "Oxygen drop (desaturation)", hypoxic_burden: "Hypoxic burden", arousal_linked: "Drops with pulse surge",
+    motion_suspect: "Possibly motion", pulse_rise: "Pulse surge", sleeping_hr: "Sleeping pulse", movement: "Movement", delta_index: "Variability (delta index)",
+    pulse_response: "Pulse response to drops", episodes: "Fast / slow pulse episodes",
+    sleep_estimate: "Estimated sleep window", periodicity: "Repeating drop cycles" };
+  $("defs").innerHTML = Object.entries(I.definitions).map(([k, v]) => `<dt>${names[k] || k}</dt><dd>${escHtml(v)}</dd>`).join("") +
+    `<dt>Reading these</dt><dd>One night says little: drop counts swing by several per hour from night to night, and a consumer ring is accurate to about ±2–3 %. Look at the multi-night medians, and talk to a doctor about persistent findings or symptoms – this is not a diagnosis.</dd>`;
+
+  // tags (server only)
+  if (R.tags_url) {
+    $("tagCard").hidden = false;
+    let active = new Set(R.tags || []), all = [...new Set([...(R.all_tags || []), ...active])];
+    const draw = () => $("tags").innerHTML = all.map(t => `<button type="button" class="tag" aria-pressed="${active.has(t)}" data-tag="${escHtml(t)}">${escHtml(t)}</button>`).join("");
+    const save = async () => {
+      $("tagStatus").textContent = "Saving…";
+      try {
+        const res = await fetch(R.tags_url, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ tags: [...active] }) });
+        if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || res.statusText);
+        $("tagStatus").textContent = "Saved";
+      } catch (e) { $("tagStatus").textContent = `Not saved – ${e.message}`; }
+    };
+    $("tags").addEventListener("click", e => { const b = e.target.closest(".tag"); if (!b) return; const t = b.dataset.tag; active.has(t) ? active.delete(t) : active.add(t); draw(); save(); });
+    $("tagAdd").addEventListener("submit", e => { e.preventDefault(); const t = $("tagNew").value.trim(); if (!t) return; if (!all.includes(t)) all.push(t); active.add(t); $("tagNew").value = ""; draw(); save(); });
+    draw();
+  }
+}
+renderInsights();
+if (EVENTS.length) $("dropLegend").hidden = false;
+
+/* ---------- charts ---------- */
+// Line colours are the app's gradient bitmaps (ic_spo2.png / ic_pr.png) stretched over the axis range,
+// so colour depends only on the value. Fills are light_blue / light_red fading to transparent.
+const CHARTS = {
+  spo2: { data: R.spo2, min: 70, max: 100, ticks: [70, 80, 90, 100], unit: "%", labelColor: "#fff", xColor: "#fff",
+          line: [[0, "#2db35c"], [.25, "#e8863f"], [1, "#f53535"]],
+          area: [[0, "rgba(110,179,255,1)"], [1, "rgba(110,179,255,0)"]],
+          alert: v => R.spo2_alert != null && v < R.spo2_alert, events: true },
+  pr:   { data: R.pr, min: 30, max: 150, ticks: [30, 70, 110, 150], unit: "/min", labelColor: "#fff", xColor: "#fff",
+          line: [[0, "#ff3c2f"], [.2, "#e87823"], [.555, "#2da644"], [.78, "#e47e22"], [1, "#f7532b"]],
+          area: [[0, "rgba(255,112,104,1)"], [1, "rgba(255,112,104,0)"]],
+          alert: v => R.pr_alert != null && (v < R.pr_alert[0] || v > R.pr_alert[1]) },
+  motion: { data: R.motion, min: 0, max: 200, ticks: [0, 100, 200], unit: "", labelColor: "#8f91b0", xColor: "#9ea0a1",
+            stepped: true, stroke: "#34c759", flat: "rgba(102,213,130,.33)", gridColor: "rgba(219,219,219,.9)" },
+};
+const PAD = { l: 42, r: 1, t: 6, b: 30 };
+const n = R.spo2.length;
+let hover = null;
+
+function draw(el) {
+  const cfg = CHARTS[el.dataset.chart], cv = el.querySelector("canvas"), dpr = window.devicePixelRatio || 1;
+  const W = el.clientWidth, H = el.clientHeight;
+  cv.width = W * dpr; cv.height = H * dpr;
+  const g = cv.getContext("2d"); g.scale(dpr, dpr);
+  const x0 = PAD.l, x1 = W - PAD.r, y0 = PAD.t, y1 = H - PAD.b, pw = x1 - x0, ph = y1 - y0;
+  const X = i => x0 + (n > 1 ? i / (n - 1) : 0) * pw;
+  const Y = v => y1 - (Math.max(cfg.min, Math.min(cfg.max, v)) - cfg.min) / (cfg.max - cfg.min) * ph;
+  const grad = stops => { const gr = g.createLinearGradient(0, y0, 0, y1); stops.forEach(([o, c]) => gr.addColorStop(o, c)); return gr; };
+
+  g.save(); g.beginPath(); g.rect(x0, y0, pw, ph); g.clip();
+  // split into runs of valid samples so gaps stay gaps
+  const runs = []; let run = null;
+  cfg.data.forEach((v, i) => { if (v == null) { run = null; return; } if (!run) runs.push(run = []); run.push(i); });
+  const trace = r => r.forEach((i, k) => {
+    const x = X(i), y = Y(cfg.data[i]);
+    if (!k) return g.lineTo(x, y);
+    if (cfg.stepped) g.lineTo(x, Y(cfg.data[r[k - 1]]));
+    g.lineTo(x, y);
+  });
+  g.fillStyle = cfg.flat || grad(cfg.area);
+  for (const r of runs) { g.beginPath(); g.moveTo(X(r[0]), y1); trace(r); g.lineTo(X(r[r.length - 1]), y1); g.closePath(); g.fill(); }
+  g.strokeStyle = cfg.stroke || grad(cfg.line); g.lineWidth = 1.5; g.lineJoin = "round";
+  for (const r of runs) { g.beginPath(); g.moveTo(X(r[0]), Y(cfg.data[r[0]])); trace(r); g.stroke(); }
+  g.restore();
+
+  // grid, border, labels
+  g.strokeStyle = cfg.gridColor || "rgba(255,255,255,.31)"; g.lineWidth = 1;
+  cfg.ticks.slice(1, -1).forEach(t => { const y = Math.round(Y(t)) + .5; g.beginPath(); g.moveTo(x0, y); g.lineTo(x1, y); g.stroke(); });
+  g.strokeStyle = "#9ea0a1"; g.lineWidth = 1.5; g.strokeRect(x0 + .5, y0 + .5, pw - 1, ph - 1);
+  g.fillStyle = cfg.labelColor; g.font = "500 15px Poppins, system-ui, sans-serif"; g.textBaseline = "middle"; g.textAlign = "right";
+  cfg.ticks.forEach(t => g.fillText(t, x0 - 8, Math.max(y0 + 2, Math.min(y1 - 2, Y(t)))));
+  g.fillStyle = cfg.xColor; g.font = "500 13px Poppins, system-ui, sans-serif"; g.textBaseline = "top";
+  [0, 1 / 3, 2 / 3, 1].forEach((f, k) => {
+    g.textAlign = k === 0 ? "left" : k === 3 ? "right" : "center";
+    const shift = k === 1 ? -8 : k === 2 ? 8 : 0;   // the app nudges the inner labels the same way
+    g.fillText(clock(new Date(start.getTime() + f * R.duration_s * 1000), ""), x0 + f * pw + shift, y1 + 8);
+  });
+
+  if (cfg.events && EVENTS.length) {   // one tick per detected drop: tall = >=4 %, orange = followed by a pulse surge
+    EVENTS.forEach(e => {
+      g.fillStyle = e[4] === "C" ? "#cfd6e4" : "#fe5000";
+      g.fillRect(Math.round(X(e[1])) - 1, y0 + 1, 2, e[3] >= 4 ? 10 : 5);
+    });
+  }
+
+  if (cfg.alert) {   // ic_reminder: one #FF9800 triangle under every sample beyond the ring's reminder threshold
+    g.fillStyle = "#ff9800";
+    cfg.data.forEach((v, i) => {
+      if (v == null || !cfg.alert(v)) return;
+      const x = Math.max(x0 + 8, Math.min(x1 - 8, X(i)));
+      g.beginPath(); g.moveTo(x, y1 - 9); g.lineTo(x + 7, y1 - 1); g.lineTo(x - 7, y1 - 1); g.closePath(); g.fill();
+    });
+  }
+
+  const tip = el.querySelector(".tip");
+  if (hover == null) { tip.style.display = "none"; return; }
+  const x = Math.round(X(hover)) + .5, v = cfg.data[hover];
+  g.strokeStyle = "rgba(255,255,255,.7)"; g.lineWidth = 1; g.beginPath(); g.moveTo(x, y0); g.lineTo(x, y1); g.stroke();
+  const t = new Date(start.getTime() + hover * R.interval_s * 1000);
+  const ev = cfg.events && EVENTS.find(e => hover >= e[0] && hover <= e[2]);
+  tip.textContent = `${clock(t)} · ${v == null ? "--" : v + cfg.unit}` + (ev ? ` · drop −${ev[3]}%${ev[4] === "C" ? "" : " + pulse surge"}${ev[5] ? " (motion?)" : ""}` : "");
+  tip.style.display = "block";
+  tip.style.left = `${Math.max(x0, Math.min(x1 - tip.offsetWidth, x - tip.offsetWidth / 2))}px`;
+}
+
+const charts = [...document.querySelectorAll(".chart")];
+const drawAll = () => charts.forEach(draw);
+charts.forEach(el => {
+  const move = e => {
+    const r = el.getBoundingClientRect(), px = (e.touches ? e.touches[0].clientX : e.clientX) - r.left;
+    const f = (px - PAD.l) / (r.width - PAD.l - PAD.r);
+    hover = Math.max(0, Math.min(n - 1, Math.round(f * (n - 1)))); drawAll();
+  };
+  el.addEventListener("mousemove", move); el.addEventListener("touchmove", move, { passive: true }); el.addEventListener("touchstart", move, { passive: true });
+  el.addEventListener("mouseleave", () => { hover = null; drawAll(); });
+});
+new ResizeObserver(drawAll).observe(document.querySelector(".charts"));
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(drawAll);
+drawAll();
+</script>
+</body>
+</html>

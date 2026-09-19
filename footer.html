@@ -1,0 +1,21 @@
+<!-- Shared page footer. Injected into every page (static reports and the server) in place of the FOOTER marker;
+     the logo placeholder in the img tag becomes a data: URI so static pages stay self-contained. Edit the links here. -->
+<footer class="nt-footer">
+  <a class="nt-logo" href="https://northtrail.ai/" target="_blank" rel="noopener"><img src="{{LOGO}}" alt="NorthTrail.ai" width="200" height="56"></a>
+  <p>An open-source project by <a href="https://northtrail.ai/" target="_blank" rel="noopener">NorthTrail.ai</a>
+     · <a href="https://github.com/darrylburke/lookee_o2ring_bluetooth" target="_blank" rel="noopener">Source on GitHub</a></p>
+  <p class="nt-small">Not a medical device. Not affiliated with Lookee, Viatom or Wellue.</p>
+  <style>
+    .nt-footer { max-width: 540px; margin: 0 auto; padding: 28px 20px 40px; text-align: center; border-top: 1px solid rgba(255, 255, 255, .1);
+      font: 400 13px Poppins, system-ui, sans-serif; color: #a5a7bc; }
+    .nt-footer .nt-logo { display: inline-block; border-radius: 6px; }
+    .nt-footer img { display: block; width: 200px; height: auto; opacity: .92; }
+    .nt-footer .nt-logo:hover img { opacity: 1; }
+    .nt-footer p { margin: 10px 0 0; line-height: 1.6; }
+    .nt-footer p a { color: #d9d9d9; text-decoration: none; border-bottom: 1px solid rgba(217, 217, 217, .35); }
+    .nt-footer p a:hover { color: #fff; border-color: #fe5000; }
+    .nt-footer a:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+    .nt-footer .nt-small { font-size: 11.5px; margin-top: 6px; }
+    @media print { .nt-footer { color: #555; border-color: #ccc; } .nt-footer img { filter: invert(1) hue-rotate(180deg); } .nt-footer p a { color: #333; } }
+  </style>
+</footer>

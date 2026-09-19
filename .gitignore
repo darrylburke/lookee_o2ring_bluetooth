@@ -1,0 +1,10 @@
+# personal health data + device serial numbers (downloads and generated reports) - never commit
+o2ring_data/
+*.dat
+*.csv
+__pycache__/
+*.pyc
+.venv/
+.env
+reports/
+node_modules/

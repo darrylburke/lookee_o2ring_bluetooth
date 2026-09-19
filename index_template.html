@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>O2Ring Reports</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Lato:wght@700;900&family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root { --bg: #1c2431; --card: #343c4a; --subtitle: #d9d9d9; --muted: #a5a7bc; --accent: #fe5000; --line: #5b6670; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: #fff; font-family: Poppins, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+header { background: var(--card); padding: 18px 16px; text-align: center; font: 900 26px Lato, system-ui, sans-serif; position: sticky; top: 0; z-index: 5; }
+header a { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); font: 500 14px Poppins, system-ui, sans-serif; color: #fff;
+  background: var(--accent); border-radius: 16px; padding: 5px 14px; text-decoration: none; }
+main { max-width: 580px; margin: 0 auto; padding: 18px 16px 40px; }
+body.selecting { padding-bottom: 70px; }   /* room for the fixed combine bar */
+button { font: 500 13px Poppins, system-ui, sans-serif; cursor: pointer; border-radius: 16px; padding: 5px 14px; border: 1px solid var(--line); background: transparent; color: var(--subtitle); }
+button:hover { border-color: #fff; color: #fff; } button:focus-visible, a:focus-visible, input:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+button.primary { background: var(--accent); border-color: var(--accent); color: #fff; } button:disabled { opacity: .45; cursor: default; }
+.toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 14px; }
+.toolbar .grow { flex: 1; }
+.suggest { border-left: 3px solid #6eb3ff; background: rgba(110, 179, 255, .08); border-radius: 0 8px 8px 0; padding: 12px 14px; margin-bottom: 14px;
+  font-size: 14px; line-height: 1.55; color: var(--subtitle); display: flex; gap: 12px; align-items: center; }
+.suggest div { flex: 1; } .suggest b { color: #fff; font-weight: 600; }
+.item { display: flex; align-items: stretch; background: var(--card); border-radius: 10px; margin-bottom: 12px; overflow: hidden; }
+.item.hidden-row { opacity: .55; } .item.part { margin-left: 26px; background: #2b3340; }
+.item label { display: none; align-items: center; padding: 0 0 0 14px; } body.selecting .item label { display: flex; }
+.item input { width: 20px; height: 20px; accent-color: var(--accent); }
+.item a { flex: 1; min-width: 0; display: block; padding: 13px 14px; color: inherit; text-decoration: none; }
+.item a:hover .when { color: var(--accent); }
+.when { display: block; font: 700 17px Lato, system-ui, sans-serif; }
+.badge { display: inline-block; font: 500 11px Poppins, system-ui, sans-serif; border: 1px solid var(--line); border-radius: 10px; padding: 0 8px; margin-left: 6px; color: var(--subtitle); vertical-align: 2px; }
+.badge.combined { border-color: #6eb3ff; color: #9fcbff; }
+.meta { display: block; color: var(--subtitle); font-size: 13px; margin-top: 4px; }
+.tagrow { display: block; margin-top: 6px; } .tagrow i { font-style: normal; font-size: 12px; border: 1px solid var(--line); border-radius: 10px; padding: 0 8px; margin-right: 5px; color: var(--subtitle); }
+.note { display: block; color: var(--muted); font-size: 13px; margin-top: 6px; border-left: 2px solid var(--accent); padding-left: 8px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.acts { display: flex; flex-direction: column; justify-content: center; gap: 6px; padding: 8px 12px 8px 0; }
+.acts button { padding: 3px 12px; font-size: 12px; }
+.empty { color: var(--muted); text-align: center; padding: 40px 0; }
+.bar { position: fixed; left: 0; right: 0; bottom: 0; background: var(--card); border-top: 1px solid var(--line); padding: 12px 16px; display: none; }
+body.selecting .bar { display: block; } .bar-in { max-width: 580px; margin: 0 auto; display: flex; gap: 10px; align-items: center; }
+.bar-in span { flex: 1; font-size: 14px; color: var(--subtitle); }
+#status { min-height: 20px; font-size: 13px; color: var(--muted); margin-bottom: 8px; } #status.err { color: #ff7068; }
+</style>
+</head>
+<body>
+<header>Reports<a href="/trends">Trends</a></header>
+<main>
+  <div id="status" role="status"></div>
+  <div id="suggestions"></div>
+  <div class="toolbar">
+    <button id="selectBtn" type="button">Combine recordings…</button>
+    <span class="grow"></span>
+    <button id="hiddenBtn" type="button" hidden></button>
+  </div>
+  <div id="list"></div>
+</main>
+<!--FOOTER-->
+<div class="bar"><div class="bar-in"><span id="selCount"></span><button id="cancelBtn" type="button">Cancel</button><button id="combineBtn" class="primary" type="button" disabled>Combine into one night</button></div></div>
+
+<script>
+const D = /*INDEX_DATA*/null;
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const p2 = n => String(n).padStart(2, "0");
+const parts = s => { const [d, t] = s.split(" "), [Y, M, Dd] = d.split("-"), [h, m] = t.split(":").map(Number); return { Y, M, Dd, h, m }; };
+const clock = s => { const { h, m } = parts(s); return `${p2(h % 12 || 12)}:${p2(m)} ${h < 12 ? "AM" : "PM"}`; };
+const when = s => { const { Y, M, Dd } = parts(s); return `${MONTHS[M - 1]} ${Dd} ${Y}, ${clock(s)}`; };
+let showHidden = false; try { showHidden = sessionStorage.getItem("showHidden") === "1"; } catch (e) {}
+const picked = new Set();
+
+async function call(method, url, body) {
+  $("status").className = ""; $("status").textContent = "Working…";
+  try {
+    const res = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body || {}) });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || res.statusText);
+    return data;
+  } catch (e) { $("status").className = "err"; $("status").textContent = e.message; throw e; }
+}
+
+function row(s, isPart) {
+  const m = s.metrics, selectable = !s.is_combined && s.merged_into == null && !s.hidden;
+  return `<div class="item ${s.hidden ? "hidden-row" : ""} ${isPart ? "part" : ""}">
+    ${selectable ? `<label><input type="checkbox" data-pick="${s.id}" ${picked.has(s.id) ? "checked" : ""} aria-label="Select ${esc(when(s.start_time))}"></label>` : ""}
+    <a href="/report/${s.id}"><span class="when">${esc(when(s.start_time))} – ${esc(clock(s.end_time))}${s.is_combined ? `<span class="badge combined">combined</span>` : ""}${s.hidden ? `<span class="badge">hidden</span>` : ""}${isPart ? `<span class="badge">part</span>` : ""}</span>
+    <span class="meta">${esc(s.duration)} · Avg ${s.avg_spo2 ?? "--"}% · Min ${s.min_spo2 ?? "--"}% · ${s.avg_pr ?? "--"}/min · O2 Score ${s.o2_score == null ? "--" : s.o2_score.toFixed(1)} · O2Ring ${esc(String(s.device_sn).slice(-4))}</span>
+    ${m ? `<span class="meta">Drops ≥3 %: ${m.odi3}/h · ≥4 %: ${m.odi4}/h · below 90 %: ${m.t90_pct}% · sleeping pulse ${m.lowest_pr_30min ?? "--"}</span>` : ""}
+    ${s.tags.length ? `<span class="tagrow">${s.tags.map(t => `<i>${esc(t)}</i>`).join("")}</span>` : ""}
+    ${s.notes ? `<span class="note">${esc(s.notes)}</span>` : ""}</a>
+    ${isPart ? "" : `<div class="acts">${s.is_combined ? `<button type="button" data-split="${s.id}">Split</button>` : ""}<button type="button" data-hide="${s.id}" data-to="${s.hidden ? 0 : 1}">${s.hidden ? "Unhide" : "Hide"}</button></div>`}
+  </div>`;
+}
+
+function render() {
+  const top = D.sessions.filter(s => s.merged_into == null), hiddenCount = top.filter(s => s.hidden).length;
+  const visible = top.filter(s => showHidden || !s.hidden);
+  $("list").innerHTML = visible.length ? visible.map(s => row(s) + (s.is_combined ? D.sessions.filter(p => p.merged_into === s.id).reverse().map(p => row(p, true)).join("") : "")).join("")
+    : `<p class="empty">${top.length ? "Everything is hidden." : "No sessions yet – run <code>./o2ring_download.py --db</code>"}</p>`;
+  $("hiddenBtn").hidden = !hiddenCount;
+  $("hiddenBtn").textContent = showHidden ? "Don't show hidden" : `Show hidden (${hiddenCount})`;
+  $("suggestions").innerHTML = D.suggestions.map((g, k) => `<div class="suggest"><div><b>${g.ids.length} recordings look like one night</b> – ${esc(when(g.start))} to ${esc(clock(g.end))}, gap${g.gaps_min.length > 1 ? "s" : ""} of ${g.gaps_min.map(x => x + " min").join(" and ")}.</div><button class="primary" type="button" data-suggest="${k}">Combine</button></div>`).join("");
+  $("selCount").textContent = `${picked.size} selected` + (picked.size < 2 ? " – pick at least two" : "");
+  $("combineBtn").disabled = picked.size < 2;
+}
+
+async function combine(ids) {
+  const data = await call("POST", "/api/sessions/combine", { ids });
+  location.href = `/report/${data.id}`;
+}
+document.addEventListener("click", async e => {
+  const t = e.target;
+  try {
+    if (t.dataset.hide) { await call("PUT", `/api/sessions/${t.dataset.hide}/hidden`, { hidden: t.dataset.to === "1" }); location.reload(); }
+    else if (t.dataset.split) { if (confirm("Split this night back into its separate recordings? Notes and tags on the combined night are deleted.")) { await call("POST", `/api/sessions/${t.dataset.split}/split`); location.reload(); } }
+    else if (t.dataset.suggest) { t.disabled = true; await combine(D.suggestions[t.dataset.suggest].ids); }
+  } catch (err) { t.disabled = false; }
+});
+document.addEventListener("change", e => { const id = Number(e.target.dataset.pick); if (!id) return; e.target.checked ? picked.add(id) : picked.delete(id); render(); });
+$("selectBtn").onclick = () => { document.body.classList.add("selecting"); render(); };
+$("cancelBtn").onclick = () => { document.body.classList.remove("selecting"); picked.clear(); render(); };
+$("combineBtn").onclick = async () => { $("combineBtn").disabled = true; try { await combine([...picked]); } catch (e) { $("combineBtn").disabled = false; } };
+$("hiddenBtn").onclick = () => { showHidden = !showHidden; try { sessionStorage.setItem("showHidden", showHidden ? "1" : "0"); } catch (e) {} render(); };
+render();
+</script>
+</body>
+</html>

@@ -1,0 +1,18 @@
+{
+  "name": "lookee-o2ring-server",
+  "version": "1.0.0",
+  "description": "Serves O2Ring sleep reports from MySQL and stores report notes",
+  "type": "module",
+  "license": "Unlicense",
+  "private": true,
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test"
+  },
+  "engines": { "node": ">=18" },
+  "dependencies": {
+    "express": "^4.21.2",
+    "mysql2": "^3.11.5"
+  }
+}
