@@ -48,6 +48,14 @@ button.primary { background: var(--accent); border-color: var(--accent); color: 
 body.selecting .bar { display: block; } .bar-in { max-width: 580px; margin: 0 auto; display: flex; gap: 10px; align-items: center; }
 .bar-in span { flex: 1; font-size: 14px; color: var(--subtitle); }
 #status { min-height: 20px; font-size: 13px; color: var(--muted); margin-bottom: 8px; } #status.err { color: #ff7068; }
+/* wide screens: the nights on the left, the Ask panel beside them and kept in view while the list scrolls */
+@media (min-width: 1080px) {
+  main, .bar-in { max-width: 1240px; }
+  main { padding: 24px 24px 48px; }
+  .cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 28px; align-items: start; }
+  .ask-below { margin-top: 0; position: sticky; top: 84px; }
+  .ask-below .ask-thread { max-height: max(320px, calc(100vh - 420px)); }
+}
 </style>
 </head>
 <body>
@@ -55,14 +63,18 @@ body.selecting .bar { display: block; } .bar-in { max-width: 580px; margin: 0 au
 <main>
   <div id="status" role="status"></div>
   <div id="suggestions"></div>
+  <div class="cols">
+  <div class="col-list">
   <div class="toolbar">
     <button id="selectBtn" type="button">Combine recordings…</button>
     <span class="grow"></span>
     <button id="hiddenBtn" type="button" hidden></button>
   </div>
   <div id="list"></div>
+  </div>
   <div class="ask-below">
 <!--ASK-->
+  </div>
   </div>
 </main>
 <!--FOOTER-->
