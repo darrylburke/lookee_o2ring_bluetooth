@@ -214,6 +214,7 @@ export async function writeSummary({ client, cfg, system, night, others, signal 
 - Start with the overall picture of the night. Then the one or two things most worth knowing (for example when the oxygen drops clustered and whether pulse surges came with them, time below 90 %, the sleeping pulse and when it was lowest).
 - Compare with the other nights only if at least three other full nights exist; otherwise say in a few words that there are too few nights to compare yet.
 - Quote drop rates as this dashboard's count. If the recording is shorter than 4 hours, say the per-hour rates are not reliable.
+- Always say how many of the drops are motion-suspect (desaturations.motion_suspect: the fall coincided with heavy movement, so it may be a motion artefact rather than a real drop) – as "N of M drops", in a few words, also when N is 0. If they are more than about a tenth of the drops, add that the real rate is probably nearer odi3_excl_motion_suspect.
 - Follow all the interpretation rules you were given. Do not suggest seeing a doctor on the basis of one night.` }] }],
   };
   const message = await streamRound({ client, cfg, params, signal });
