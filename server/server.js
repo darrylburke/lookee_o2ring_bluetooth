@@ -119,7 +119,7 @@ const SUMMARY_COLS = `id, device_sn, file_name, start_time, end_time, recording_
 
 const asJson = v => (typeof v === "string" ? JSON.parse(v) : v);
 const METRIC_COLS = `m.valid_hours, m.mean_spo2, m.t90_pct, m.t88_s, m.odi3, m.odi4, m.hypoxic_burden, m.arousal_linked_h,
-  m.lowest_pr_30min, m.pr_rises6_h, m.movement_bouts_h, m.fragmentation_index, m.cyclic_pct, m.est_wake_like_pct`;
+  m.lowest_pr_30min, m.pr_rises6_h, m.movement_bouts_h, m.sleep_movements_h, m.fragmentation_index, m.cyclic_pct, m.est_wake_like_pct`;
 
 /** every night with its headline metrics (numbers, not DECIMAL strings) and tags - input for trends.js */
 async function loadNights() {

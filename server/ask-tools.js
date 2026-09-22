@@ -13,13 +13,13 @@ const VISIBLE = "s.hidden = 0 AND s.merged_into IS NULL";
 const time = { type: "string", description: 'Local wall-clock time, "YYYY-MM-DD HH:MM"' };
 export const TOOL_DEFS = [
   { name: "list_nights",
-    description: "Headline metrics for every recorded night (newest first): id, start, recorded hours, mean SpO2, time below 90 %, oxygen drops per hour (3 % and 4 %), hypoxic burden, drops with a pulse surge per hour, sleeping pulse, pulse surges, movement, fragmentation, share of night in repeating drop cycles, estimated restless share, the ring's own drop counts and O2 score, tags. Nights shorter than 4 hours are flagged `short` and their per-hour rates are not meaningful. Call this first for any question about more than one night.",
+    description: "Headline metrics for every recorded night (newest first): id, start, recorded hours, mean SpO2, time below 90 %, oxygen drops per hour (3 % and 4 %), hypoxic burden, drops with a pulse surge per hour, sleeping pulse, pulse surges, movement (per recording hour, and movements in sleep per sleep hour on the sleep-lab definition), fragmentation, share of night in repeating drop cycles, estimated restless share, the ring's own drop counts and O2 score, tags. Nights shorter than 4 hours are flagged `short` and their per-hour rates are not meaningful. Call this first for any question about more than one night.",
     input_schema: { type: "object", additionalProperties: false, properties: {
       from: { type: "string", description: 'Only nights starting on or after this date, "YYYY-MM-DD"' },
       to: { type: "string", description: 'Only nights starting on or before this date, "YYYY-MM-DD"' },
       limit: { type: "integer", description: "Maximum nights to return (default 60, max 120)" } } } },
   { name: "get_night",
-    description: "Everything computed for one night: oxygen statistics and time below thresholds, desaturation summary (counts, per-hour rates, by hour of night, depth x duration table, classes A/B/C, the app-style ODI rows), pulse statistics and night-curve shape, movement, the movement-based sleep-window estimate, repeating-cycle (periodicity) analysis, the ring's own summary, and tags. Individual drops are NOT included - use get_drops.",
+    description: "Everything computed for one night: oxygen statistics and time below thresholds, desaturation summary (counts, per-hour rates, by hour of night, depth x duration table, classes A/B/C, the app-style ODI rows), pulse statistics and night-curve shape, movement (including `in_sleep`, the sleep-lab style count, and `reference`, the published healthy bands that apply to this person's sex and age with a verdict), the movement-based sleep-window estimate, repeating-cycle (periodicity) analysis, the ring's own summary, and tags. Individual drops are NOT included - use get_drops.",
     input_schema: { type: "object", additionalProperties: false, required: ["night_id"], properties: { night_id: { type: "integer" } } } },
   { name: "get_drops",
     description: "The individual oxygen drops (desaturation events) of one night, in time order: time of the lowest point, depth in %, lowest SpO2, duration in seconds, pulse rise in bpm around the nadir, whether movement accompanied it, class (A = drop + pulse surge + movement, B = drop + pulse surge, C = drop only) and whether it may be a motion artefact. Returns the total count matching the filters plus up to `limit` rows as a column list and plain rows. Ask for a time window or a minimum depth rather than every drop of a busy night - get_night already has the per-hour counts.",
@@ -39,7 +39,7 @@ export const TOOL_DEFS = [
 ];
 
 const METRIC_COLS = `m.valid_hours, m.mean_spo2, m.baseline_spo2, m.t90_s, m.t90_pct, m.t88_s, m.odi3, m.odi4, m.hypoxic_burden,
-  m.arousal_linked_h, m.delta_index, m.mean_pr, m.lowest_pr_30min, m.pr_rises6_h, m.movement_bouts_h, m.fragmentation_index,
+  m.arousal_linked_h, m.delta_index, m.mean_pr, m.lowest_pr_30min, m.pr_rises6_h, m.movement_bouts_h, m.sleep_movements_h, m.fragmentation_index,
   m.cyclic_pct, m.est_sleep_window_h, m.est_wake_like_pct`;
 
 const num = v => (v == null ? null : Number(v));

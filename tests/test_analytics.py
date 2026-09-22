@@ -2,7 +2,8 @@ import sys, unittest
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import math
-from o2ring_analytics import analyze, find_desaturations, find_pulse_rises
+from datetime import date
+from o2ring_analytics import analyze, find_desaturations, find_pulse_rises, resolve_profile, movement_reference
 
 
 def night(spo2, pr=None, motion=None):
@@ -134,6 +135,90 @@ class SleepEstimate(unittest.TestCase):
 
     def test_too_short_to_estimate(self):
         self.assertIsNone(self.night([0] * 20))
+
+
+class Profile(unittest.TestCase):
+    def test_from_env_style_dict(self):
+        env = {"O2RING_SEX": "Male", "O2RING_BIRTH_YEAR": "1976", "O2RING_HEIGHT_CM": "180", "O2RING_WEIGHT_KG": "81"}
+        self.assertEqual(resolve_profile(env, date(2026, 9, 21)), {"sex": "m", "age": 50, "bmi": 25.0})
+        self.assertEqual(resolve_profile({"O2RING_SEX": "woman"}, date(2026, 1, 1))["sex"], "f")
+
+    def test_missing_or_bad_values_are_none(self):
+        self.assertEqual(resolve_profile({}, date(2026, 1, 1)), {"sex": None, "age": None, "bmi": None})
+        env = {"O2RING_SEX": "x", "O2RING_BIRTH_YEAR": "abc", "O2RING_WEIGHT_KG": "80"}    # no height: no BMI
+        self.assertEqual(resolve_profile(env, date(2026, 1, 1)), {"sex": None, "age": None, "bmi": None})
+
+    def test_profile_travels_with_the_result(self):
+        r = analyze(night([96] * 100), profile={"sex": "f", "age": 33, "bmi": None})
+        self.assertEqual(r["profile"], {"sex": "f", "age": 33, "bmi": None})
+        self.assertEqual(r["movement"]["reference"]["all_movements"]["median"], 7)
+        self.assertEqual(analyze(night([96] * 100))["profile"], {"sex": None, "age": None, "bmi": None})
+
+
+class MovementReference(unittest.TestCase):
+    def test_bands_follow_age_and_sex(self):
+        ref = movement_reference({"sex": "m", "age": 40, "bmi": None})
+        self.assertEqual((ref["lmm"]["median"], ref["lmm"]["iqr"], ref["lmm"]["p95"]), (6.8, [4.5, 10.8], 17.6))
+        self.assertEqual(ref["position_shifts"]["per_h"], 2.7)          # De Koninck 1992, 35-45
+        self.assertEqual(ref["position_shifts"]["group"], "35-45")
+        self.assertEqual(ref["all_movements"]["median"], 12.5)          # Montini 2024, men
+        self.assertEqual(movement_reference({"sex": "f", "age": 70, "bmi": None})["position_shifts"]["per_h"], 2.1)
+        self.assertEqual(movement_reference({"sex": "f", "age": 22, "bmi": None})["position_shifts"]["per_h"], 3.6)
+
+    def test_unknown_profile_uses_pooled_values(self):
+        ref = movement_reference({"sex": None, "age": None, "bmi": None})
+        self.assertEqual(ref["lmm"]["median"], 6.8)
+        self.assertIsNone(ref["position_shifts"])
+        self.assertEqual(ref["all_movements"]["median"], 11)
+        self.assertEqual(ref["all_movements"]["group"], "all")
+
+    def test_verdict_against_the_healthy_distribution(self):
+        verdict = lambda v: movement_reference({"sex": None, "age": None, "bmi": None}, v)["lmm"]["verdict"]
+        self.assertEqual(verdict(5), "typical")
+        self.assertEqual(verdict(10.8), "typical")
+        self.assertEqual(verdict(12), "high")
+        self.assertEqual(verdict(20), "very_high")
+        self.assertIsNone(verdict(None))
+
+
+class SleepMovements(unittest.TestCase):
+    """Movements counted the way the large-muscle-group-movement studies do: inside sleep, 3-45 s long."""
+    quiet = [0] * 15
+    twitch = [20] + [0] * 14            # one 4-s movement in the minute (small: minutes of 20s stay below the wake score)
+    long_bout = [30] * 15               # 60 s of movement: too long to be a sleep movement
+
+    def test_counts_short_bouts_inside_the_sleep_window(self):
+        restless = ([30, 30, 30, 0, 0, 0] * 38)[:225]     # 15 awake minutes: 12-s movements every 24 s
+        minutes = ([self.quiet] * 30 + [self.twitch] * 60 + [self.quiet] * 2 + [self.long_bout] + [self.quiet] * 3
+                   + [self.twitch] * 60 + [self.quiet] * 60)                                       # 216 minutes
+        motion = restless + [v for m in minutes for v in m]
+        r = analyze(night([96] * len(motion), motion=motion))
+        self.assertEqual(r["movement"]["bouts"], 159)              # the old whole-recording count is unchanged
+        s = r["movement"]["in_sleep"]
+        self.assertEqual(s["count"], 120)
+        self.assertEqual(s["excluded_long"], 1)
+        self.assertGreaterEqual(s["excluded_awake"], 30)
+        self.assertEqual(s["major"], 1)
+        self.assertAlmostEqual(s["hours"], (231 - 19) / 60, delta=0.05)  # window starts after 15 restless + 4 Webster minutes
+        self.assertAlmostEqual(s["per_h"], 120 / s["hours"], delta=0.05)
+        self.assertAlmostEqual(s["major_per_h"], 1 / s["hours"], delta=0.05)
+        self.assertEqual(r["movement"]["reference"]["lmm"]["verdict"], "very_high")
+
+    def test_long_wake_inside_the_window_is_left_out(self):
+        awake = [30] * 15
+        minutes = ([self.quiet] * 30 + [self.twitch] * 60 + [self.quiet] * 2 + [awake] * 10 + [self.quiet] * 4
+                   + [self.twitch] * 60 + [self.quiet] * 30)                                       # 196 minutes
+        motion = [v for m in minutes for v in m]
+        s = analyze(night([96] * len(motion), motion=motion))["movement"]["in_sleep"]
+        self.assertEqual(s["count"], 120)
+        self.assertEqual((s["excluded_awake"], s["excluded_long"]), (1, 0))   # the 10-min run starts in a long wake stretch
+        self.assertAlmostEqual(s["hours"], (196 - 15) / 60, delta=0.05)      # 12 wake-like minutes + Webster's 3 are not sleep
+
+    def test_no_sleep_window_no_metric(self):
+        motion = [v for m in [[90] * 15] * 60 for v in m]
+        r = analyze(night([96] * len(motion), motion=motion))
+        self.assertIsNone(r["movement"]["in_sleep"])
+        self.assertIsNone(r["movement"]["reference"]["lmm"]["verdict"])
 
 
 class Periodicity(unittest.TestCase):

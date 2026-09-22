@@ -82,6 +82,12 @@ $EDITOR .env                         # set O2RING_DB_PASSWORD (and host/user/nam
 `.env` is git-ignored and is read by both the Python tools and the Node server.
 Real environment variables take precedence over the file.
 
+Optionally add `O2RING_SEX` (`m` / `f`) and `O2RING_BIRTH_YEAR`: the reports then
+show the published movement counts for your sex and age group next to your own
+(see *Movement reference values* in `docs/analytics-research.md`). Height and
+weight are only stored as a BMI with each analysed night. After adding or changing
+them, run `./o2ring_db.py --reanalyze --force` so stored nights pick them up.
+
 Load data:
 
 ```bash

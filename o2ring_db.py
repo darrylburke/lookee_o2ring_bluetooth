@@ -208,7 +208,7 @@ def connect():
                        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'session_metrics'""")
         have = {row[0] for row in cur.fetchall()}
         for column, ddl in (("cyclic_pct", "DECIMAL(5,1)"), ("est_sleep_window_h", "DECIMAL(4,2)"),
-                            ("est_wake_like_pct", "DECIMAL(5,1)")):
+                            ("est_wake_like_pct", "DECIMAL(5,1)"), ("sleep_movements_h", "DECIMAL(5,1)")):
             if column not in have:
                 cur.execute(f"ALTER TABLE session_metrics ADD COLUMN {column} {ddl} NULL AFTER fragmentation_index")
     conn.commit()
@@ -277,7 +277,7 @@ def store_session(conn, sn: str, name: str, rec: dict, raw: bytes) -> bool:
 
 def store_analytics(conn, session_id: int, start: datetime, samples) -> dict:
     """(Re)compute o2ring_analytics for one session and replace its stored metrics + events."""
-    insights = o2ring_analytics.analyze(samples)
+    insights = o2ring_analytics.analyze(samples, o2ring_analytics.resolve_profile(os.environ, start.date()))
     rows = insights.pop("event_rows", [])
     at = lambda idx: start + timedelta(seconds=idx * o2ring_analytics.DT)
     spo2, desat, pulse, move = (insights.get(k, {}) for k in ("spo2", "desaturations", "pulse", "movement"))
@@ -290,15 +290,16 @@ def store_analytics(conn, session_id: int, start: datetime, samples) -> dict:
                 """REPLACE INTO session_metrics (session_id, algo_version, valid_hours, valid_pct, mean_spo2,
                        baseline_spo2, t90_s, t90_pct, t88_s, odi3, odi4, hypoxic_burden, arousal_linked_h,
                        delta_index, mean_pr, lowest_pr_30min, pr_rises6_h, movement_bouts_h, fragmentation_index,
-                       cyclic_pct, est_sleep_window_h, est_wake_like_pct, detail)
-                   VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+                       cyclic_pct, est_sleep_window_h, est_wake_like_pct, sleep_movements_h, detail)
+                   VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
                 (session_id, insights["algo_version"], insights["valid_hours"], insights["valid_pct"],
                  spo2.get("mean"), spo2.get("baseline"), below.get("90", {}).get("seconds"),
                  below.get("90", {}).get("pct"), below.get("88", {}).get("seconds"), desat.get("odi3"),
                  desat.get("odi4"), desat.get("hypoxic_burden"), desat.get("arousal_linked_per_h"),
                  spo2.get("delta_index"), pulse.get("mean"), pulse.get("lowest_30min"), pulse.get("rises6_per_h"),
                  move.get("bouts_per_h"), move.get("fragmentation_index"), (insights.get("periodicity") or {}).get("cyclic_pct"),
-                 sleep.get("window_h"), sleep.get("wake_like_pct"), json.dumps(insights)))
+                 sleep.get("window_h"), sleep.get("wake_like_pct"), (move.get("in_sleep") or {}).get("per_h"),
+                 json.dumps(insights)))
             cur.executemany(
                 """INSERT INTO desat_events (session_id, seq, start_time, nadir_time, end_time, duration_s, peak_spo2,
                        nadir_spo2, depth, area_pct_min, pr_rise_bpm, has_motion, motion_suspect, class)

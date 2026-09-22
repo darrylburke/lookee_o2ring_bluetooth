@@ -12,7 +12,7 @@ recomputes stored nights.
 import math
 import statistics as st
 
-ALGO_VERSION = 3
+ALGO_VERSION = 4
 DT = 4  # seconds per sample
 MIN_TREND_HOURS = 4  # nights shorter than this stay out of trends and baselines
 
@@ -33,6 +33,12 @@ DEFINITIONS = {
     "sleeping_hr": "Lowest rolling 30-minute and 5-minute mean pulse (windows >=80 % valid). Never a single sample.",
     "movement": "Bout = run of non-zero motion samples, gaps <=8 s merged; major movement = bout >=30 s. "
                 "Fragmentation index = % of 30-s epochs with movement + % of still periods lasting <=1 min.",
+    "sleep_movements": "Bouts counted the way sleep-lab 'large muscle group movement' studies do: only inside the estimated "
+                       "sleep window, outside wake-like stretches of >=5 min, and no longer than 45 s (a 4-s sample already meets "
+                       "the 3-s minimum); per hour of that sleep time. Major = bouts >=30 s there, a rough stand-in for position "
+                       "changes. Reference values come from EMG/video sleep-lab studies of healthy adults (Ibrahim 2023 median "
+                       "6.8/h, upper quartile 10.8, 95th percentile 17.6; Montini 2024 men 12.5/h, women 7/h; De Koninck 1992 "
+                       "position changes by age), so a finger sensor can only be 'in the neighbourhood' of them.",
     "delta_index": "Mean absolute difference between successive 12-second SpO2 means (Levy 1996).",
     "pulse_response": "Mean over desaturations of (peak pulse - preceding minimum) inside a window taken from the "
                       "night's ensemble-averaged pulse around the nadirs (Blanchard 2025); needs >=10 events.",
@@ -50,6 +56,42 @@ DEFINITIONS = {
                    "oximetry cannot tell obstructive from central ones. Thresholds are this project's own, for trending only.",
     "episodes": "Pulse >90 bpm or <40 bpm sustained >30 s with no movement in or 30 s before the run (AASM adult rules).",
 }
+
+
+def resolve_profile(env, when):
+    """Optional sex / birth year / height / weight from an environment-style dict -> {sex, age, bmi} (None = unknown).
+    `when` is the date of the night, so the stored age is the age that night."""
+    sex = str(env.get("O2RING_SEX", "")).strip().lower()
+    sex = "m" if sex in ("m", "male", "man") else "f" if sex in ("f", "female", "woman") else None
+    num = lambda key: float(env[key]) if str(env.get(key, "")).replace(".", "", 1).isdigit() else None
+    year, height, weight = num("O2RING_BIRTH_YEAR"), num("O2RING_HEIGHT_CM"), num("O2RING_WEIGHT_KG")
+    age = int(when.year - year) if year and 1900 <= year <= when.year else None
+    bmi = round(weight / (height / 100) ** 2, 1) if height and weight else None
+    return {"sex": sex, "age": age, "bmi": bmi}
+
+
+# Published movement counts in healthy adults (see docs/analytics-research.md, "Movement reference values").
+_LMM_REFERENCE = {"median": 6.8, "iqr": [4.5, 10.8], "p95": 17.6,
+                  "source": "Ibrahim 2023: large muscle group movements, 100 healthy adults 19-77, video-PSG"}
+_ALL_MOVEMENTS = {"m": 12.5, "f": 7, None: 11}      # Montini 2024: every movement >=100 ms, 50 healthy adults 20-70
+_POSITION_SHIFTS = [(18, 24, 3.6), (35, 45, 2.7), (65, 80, 2.1)]   # De Koninck 1992: position changes/h by age group
+
+
+def movement_reference(profile, per_h=None):
+    """Which published bands apply to this person, and where a per-hour value falls against the healthy distribution."""
+    sex, age = profile.get("sex"), profile.get("age")
+    shifts = None
+    if age is not None:
+        lo, hi, rate = min(_POSITION_SHIFTS, key=lambda g: min(abs(age - g[0]), abs(age - g[1])) if not g[0] <= age <= g[1] else 0)
+        shifts = {"per_h": rate, "group": f"{lo}-{hi}", "source": "De Koninck 1992: position changes, filmed, 4 nights per person"}
+    verdict = None if per_h is None else "typical" if per_h <= _LMM_REFERENCE["iqr"][1] else \
+        "high" if per_h <= _LMM_REFERENCE["p95"] else "very_high"
+    return {
+        "lmm": {**_LMM_REFERENCE, "verdict": verdict},
+        "all_movements": {"median": _ALL_MOVEMENTS[sex], "group": {"m": "men", "f": "women"}.get(sex, "all"),
+                          "source": "Montini 2024: every movement >=100 ms, video-PSG; men move about 1.8x as often as women"},
+        "position_shifts": shifts,
+    }
 
 
 def _clean(samples):
@@ -146,7 +188,8 @@ def _rolling_min_mean(values, window):
     return best
 
 
-def _movement(motion, hours):
+def _bouts(motion):
+    """(first, last) sample index of every movement bout: non-zero runs, gaps of <=2 samples (8 s) merged."""
     n, bouts, i = len(motion), [], 0
     while i < n:
         if motion[i] > 0:
@@ -159,6 +202,34 @@ def _movement(motion, hours):
             i = last + 1
         else:
             i += 1
+    return bouts
+
+
+def _sleep_movements(bouts, sleep):
+    """Bouts inside the estimated sleep window, away from long wake-like stretches, <=45 s (DEFINITIONS['sleep_movements'])."""
+    if not sleep or not sleep.get("found"):
+        return None
+    per_min, timeline = 60 // DT, sleep["timeline"]
+    asleep = [False] * len(timeline)
+    for a, b in sleep["long_wake_runs"]:            # minute ranges, end exclusive
+        for k in range(a, b):
+            asleep[k] = None                        # marks a long wake stretch
+    for k in range(sleep["onset_min"], sleep["offset_min"]):
+        if asleep[k] is False:
+            asleep[k] = True
+    hours = sum(1 for v in asleep if v) / 60
+    inside = [(a, b) for a, b in bouts if a // per_min < len(asleep) and asleep[a // per_min]]
+    short = [(a, b) for a, b in inside if (b - a + 1) * DT <= 45]
+    major = sum(1 for a, b in inside if (b - a + 1) * DT >= 30)
+    return {
+        "count": len(short), "per_h": round(len(short) / hours, 1) if hours else None, "hours": round(hours, 2),
+        "major": major, "major_per_h": round(major / hours, 2) if hours else None,
+        "excluded_long": len(inside) - len(short), "excluded_awake": len(bouts) - len(inside),
+    }
+
+
+def _movement(motion, hours):
+    n, bouts = len(motion), _bouts(motion)
     epochs = [sum(motion[k:k + 8]) > 0 for k in range(0, n, 8)]  # ~30 s
     still_runs, run = [], 0
     for mobile in epochs:
@@ -288,6 +359,7 @@ def _sleep_estimate(motion, events, has_data=None):
         "quiet_h": round((len(inside) - sum(inside)) / 60, 2),
         "wake_like_min": sum(inside), "wake_like_pct": round(100 * sum(inside) / len(inside), 1),
         "long_wake_periods": sum(1 for a, b in wake_runs if b - a + 1 >= 5),
+        "long_wake_runs": [[onset + a, onset + b + 1] for a, b in wake_runs if b - a + 1 >= 5],   # minute ranges, end exclusive
         "longest_wake_min": max((b - a + 1 for a, b in wake_runs), default=0),
         "before_sleep_min": onset, "after_sleep_min": m - offset - 1,
         "odi3_in_window": round(len(in_window) / window_h, 1) if window_h else None,
@@ -356,15 +428,17 @@ def _periodicity(spo2, pr):
     }
 
 
-def analyze(samples):
-    """samples: iterable of (spo2|None, pr|None, motion|None) at 4-s spacing -> insights dict."""
+def analyze(samples, profile=None):
+    """samples: iterable of (spo2|None, pr|None, motion|None) at 4-s spacing -> insights dict.
+    profile: optional {sex, age, bmi} from resolve_profile(); it only chooses which published reference bands are shown."""
     samples = list(samples)
+    profile = {"sex": None, "age": None, "bmi": None, **(profile or {})}
     spo2, pr, motion = _clean(samples)
     n = len(samples)
     valid_spo2 = [v for v in spo2 if v is not None]
     valid_pr = [v for v in pr if v is not None]
     hours = len(valid_spo2) * DT / 3600
-    out = {"algo_version": ALGO_VERSION, "definitions": DEFINITIONS, "samples": n,
+    out = {"algo_version": ALGO_VERSION, "definitions": DEFINITIONS, "samples": n, "profile": profile,
            "valid_hours": round(hours, 2), "valid_pct": round(100 * len(valid_spo2) / n, 1) if n else 0,
            "short": hours < MIN_TREND_HOURS}  # per-hour rates from short recordings are not meaningful
     if len(valid_spo2) < 15:
@@ -461,5 +535,7 @@ def analyze(samples):
 
     out["movement"] = _movement(motion, n * DT / 3600)
     out["sleep_estimate"] = _sleep_estimate(motion, events, [s is not None or p is not None for s, p in zip(spo2, pr)])
+    out["movement"]["in_sleep"] = _sleep_movements(_bouts(motion), out["sleep_estimate"])
+    out["movement"]["reference"] = movement_reference(profile, (out["movement"]["in_sleep"] or {}).get("per_h"))
     out["periodicity"] = _periodicity(spo2, pr)
     return out

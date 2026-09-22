@@ -55,3 +55,10 @@ test("doctor prompts need several nights and a consistent pattern", () => {
   assert.match(buildTrends(bad).prompts[0], /median over the last 8 nights is 17\.0/);
   assert.deepEqual(buildTrends(steady(8)).prompts, []);
 });
+
+test("movements in sleep (study definition) is a trended metric", () => {
+  const t = buildTrends(steady(3).map((n, i) => ({ ...n, sleep_movements_h: 6 + i })));
+  const s = t.series.find(s => s.key === "sleep_movements_h");
+  assert.equal(s.summary.median14, 7);
+  assert.equal(s.worse, "up");
+});

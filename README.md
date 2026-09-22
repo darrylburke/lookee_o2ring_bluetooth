@@ -130,7 +130,9 @@ comes from a literature review written up in
 - **Approximate hypoxic burden** – depth × length of all drops per hour
 - **Drops with a pulse surge** – separates real events from measurement noise
 - **Sleeping pulse** (lowest 30-minute mean), pulse surges, fast/slow episodes
-- **Movement bouts and fragmentation**, a movement-only **sleep-window estimate**
+- **Movement bouts and fragmentation**, a movement-only **sleep-window estimate**,
+  and **movements in sleep** counted the way sleep-lab movement studies do, shown
+  against published healthy ranges for your sex and age (optional, from `.env`)
 - **Repeating drop cycles** – 30–70 s rhythm found by Fourier analysis
 - The app's ten **ODI rows** and per-range **Drops (ODI4%)** column, which the
   app itself currently shows as "Coming Soon"

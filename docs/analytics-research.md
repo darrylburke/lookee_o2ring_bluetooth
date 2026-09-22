@@ -44,6 +44,7 @@ This is for a personal wellness dashboard. Nothing here diagnoses anything.
 | **Sleeping heart rate vs personal baseline** | mean and median PR; lowest rolling **30-min** and 5-min mean (≥80 % valid); never the single lowest sample. Flag when > baseline + max(3 bpm, 2×MAD) over a trailing 14–28-night median | Best-evidenced pulse metric. Alcohol: ~+2.5 bpm per drink above personal average (Grosicki 2026, 5.1 M person-days); dose-dependent in an RCT (de Zambotti 2021). Illness: resting-HR elevation preceded symptoms in 63 % of COVID cases (Mishra 2020). Wearable nocturnal HR is accurate to ~1–2 bpm. |
 | **Desaturation event classes** | for each ≥3 % event look −10…+30 s around the nadir for a pulse rise ≥6 bpm (vs median of prior 40 s) and/or a movement burst → A: desat+pulse+motion, B: desat+pulse, C: desat only. Report "arousal-linked desaturations /h" = (A+B)/h | Best use of all three channels. A ≥6 bpm rise as an arousal surrogate improved home-test agreement with PSG (Lachapelle 2019; ICC 0.77→0.84). Separates physiological events from quantisation noise. |
 | **Movement bouts & fragmentation** | bouts = runs of non-zero motion merged across ≤8 s gaps → bouts/h, bouts ≥30 s ("major movements"), longest still period. Fragmentation index = % mobile 30-s epochs + % immobile bouts ≤1 min (Actiware definition) | Needs no calibration of the unknown motion byte. SFI tracks sleep architecture better than actigraphic efficiency/WASO. |
+| **Movements in sleep** (sleep-lab definition) | the same bouts, but only inside the estimated sleep window, outside wake-like stretches ≥5 min, and ≤45 s long; per hour of that sleep time. Bouts ≥30 s there = "major movements in sleep" (≈ position changes). Shown against the bands in *Movement reference values* below, chosen by the optional sex / birth year in `.env` | Mirrors the AASM-style large-muscle-group-movement (LMM) rule (≥3 s, ≤45 s, after ≥10 s of sleep) closely enough to compare with published counts; the whole-recording bouts/h above runs 2–3× higher because it also counts wake and long restless runs. |
 | **Multi-night view** | rolling 7/14/30-night median + IQR of the above (14 headline), % of nights with ODI ≥5/15/30, best/worst, n shown, nights <4 h valid excluded | The single most important presentation change (ground rule 3). |
 | **Data quality** | valid hours, % rejected (invalid / motion-suspect), definition strings | Every other number depends on it. |
 
@@ -87,8 +88,27 @@ This is for a personal wellness dashboard. Nothing here diagnoses anything.
 Tier 1 is implemented in `o2ring_analytics.py` (ALGO_VERSION 2) together with these Tier 2 items: delta index,
 events by hour, depth × duration table, time-below table, pulse-rate rise index, ΔHRoxi, night-curve shape,
 tachy/bradycardia episodes, the periodicity indicator, the movement-based sleep-window estimate, baseline flags
-and tags. The periodicity and sleep-estimate thresholds (≥50 % in-band power with a ≥50 % narrow peak and a ≥3 %
+and tags. ALGO_VERSION 4 added the sleep-lab style movement count and the reference bands. The periodicity and sleep-estimate thresholds (≥50 % in-band power with a ≥50 % narrow peak and a ≥3 %
 swing; Oakley score >40 on the raw motion byte) are this project's own choices, not validated cut-offs.
+
+## Movement reference values
+
+Published counts of body movements in healthy sleepers, and how this project's numbers relate to them. All of them come
+from EMG, video or bed sensors in a lab; the ring's finger accelerometer at one sample per 4 s sees the same kind of
+movement but not with the same sensitivity, so treat the bands as a neighbourhood, not a pass/fail line.
+
+| Study | What was counted | Healthy values | Used here for |
+|---|---|---|---|
+| Ibrahim 2023 (SLEEP), 100 healthy adults 19–77, video-PSG | large muscle group movements: EMG/artefact on ≥2 channels, 3–45 s, after ≥10 s of sleep; per hour of sleep | median 6.8/h, IQR 4.5–10.8, 90th pct 15.0, 95th pct 17.6; NREM 6.2, REM 8.4; higher in men (p = 0.018); total index not age-dependent, movements ending in an awakening rise with age; 83 % coincide with an arousal or awakening | the "movements in sleep" verdict: ≤10.8 typical, ≤17.6 high, above that very high |
+| Montini 2024 (SLEEP), 50 healthy adults 20–70, video-PSG | every movement ≥100 ms (leg movements, oro-alimentary automatisms, position changes, …) | median 11/h, IQR 8–15; men 12.5/h vs women 7/h; falls N1 → N3, rises again in REM; no age effect | the sex-specific "counting every twitch" line in the report |
+| Mogavero 2025 (J Sleep Res), 141 people from school age to older adults | LMM by the same rule, across the lifespan | LMM, and LMM with arousals/awakenings, rise with age; in adults they concentrate in REM | wording only: older adults sit naturally higher |
+| De Koninck 1992 (SLEEP), 50 people in five age groups, filmed 4 nights | whole-body position changes | 4.4 (3–5 y), 4.7 (8–12), 3.6 (18–24), 2.7 (35–45), 2.1 (65–80) per hour | the age band shown next to "major movements in sleep per hour" |
+| Bliwise 2023 (SLEEP, editorial) | 1930s bed-sensor and film studies | 2.5–10 gross movements per hour; consistent with the LMM figures 90 years later | context |
+| Kováčová & Stebelová 2021 (IJERPH), 74 healthy adults, wrist actigraphy | Actiware fragmentation index, moving time, immobile bouts | women and younger people less fragmented; values in boxplots only | confirms the sex effect for the actigraphic fragmentation index |
+
+Why sex and age but not weight: the movement normative work reports sex and age effects and nothing on body mass. BMI is
+stored with each night (if height and weight are given) only as context for the oximetry side, whose clinic-cohort
+cut-offs come from populations with a known BMI mix.
 
 ## Do not build
 
@@ -123,7 +143,7 @@ Azarbarzin 2019 (Eur Heart J, hypoxic burden) · Esmaeili 2023 (HBOxi) · Levy &
 Behar 2021 (oximetry biomarker toolbox, npj Digit Med) · Chung 2012 (ODI vs AHI)
 · Tisyakorn 2024 (O2Ring vs PSG, Sleep Breath) · Farré 1998, Vagedes 2014
 (averaging time) · Levy 1996 (delta index) · Oldenburg 2016, Baumert 2020 (T90)
-· Azarbarzin 2021 (AJRCCM, ΔHR) · Blanchard 2025 (ERJ, ΔHRoxi) · Adachi 2003,
+· Azarbarzin 2021 (AJRCCM, ΔHR) · Blanchard 2025 (ERJ, ΔHRoxi) · Ibrahim 2023, Montini 2024, Mogavero 2025, De Koninck 1992, Bliwise 2023 (movements in sleep) · Adachi 2003,
 Lachapelle 2019 (pulse-rate rises) · Zamarrón 2003 (periodicity) · de Zambotti
 2021, Grosicki 2026 (alcohol and nocturnal HR) · Mishra 2020, Radin 2020
 (illness) · Marino 2013 (actigraphy validity) · Punjabi 2020, Roeder 2020,

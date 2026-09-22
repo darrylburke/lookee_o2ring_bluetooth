@@ -15,6 +15,7 @@ import argparse
 import html
 import json
 import re
+import os
 import sys
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -57,7 +58,7 @@ def build_report(session: dict, samples: list, device_name: str, info: dict = No
     spo2_rows.append({"range": "Total", "duration": hms(measured), "pct": "100.00%" if spo2 else "0.00%"})
 
     asleep = session.get("asleep_s") or 0
-    insights = o2ring_analytics.analyze(samples)
+    insights = o2ring_analytics.analyze(samples, o2ring_analytics.resolve_profile(os.environ, start.date()))
     insights.pop("event_rows", None)
     # the app draws a triangle under samples beyond the ring's own reminder thresholds
     info = info or {}
@@ -221,6 +222,11 @@ def main():
                     help="read .dat files from DIR instead of MySQL")
     ap.add_argument("--demo", action="store_true", help="write reports/demo.html from a synthetic night")
     args = ap.parse_args()
+    try:
+        from o2ring_db import load_env
+        load_env()                       # the optional profile (O2RING_SEX, O2RING_BIRTH_YEAR, ...) picks the reference bands
+    except ImportError:                  # pymysql missing: static reports still work, just without a profile from .env
+        pass
 
     source = ([demo_session()] if args.demo else sessions_from_files(args.from_files, args.session) if args.from_files
               else sessions_from_db(args.session))

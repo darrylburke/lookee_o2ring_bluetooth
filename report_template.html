@@ -440,6 +440,13 @@ function renderInsights() {
     tile("Pulse surges ≥6 bpm", p.rises6_per_h, " /h", `≥10 bpm: ${p.rises10_per_h}/h` + (d.pulse_response ? ` · response to drops ${d.pulse_response.bpm} bpm` : "") +
       (p.tachycardia.length + p.bradycardia.length ? ` · ${p.tachycardia.length} fast / ${p.bradycardia.length} slow episodes` : ""), "pr_rises6_h"));
   tiles.push(tile("Movement", m.bouts_per_h, " bouts/h", `${m.major_movements} major · longest still ${m.longest_still_min} min · fragmentation ${m.fragmentation_index}`, "movement_bouts_h"));
+  const sm = m.in_sleep, ref = m.reference, VERDICT = { typical: ["", "within the middle half of healthy adults"],
+    high: ["up", "above the middle half of healthy adults"], very_high: ["up strong", "above the 95th percentile of healthy adults"] };
+  if (sm && !I.short) {
+    const v = ref && VERDICT[ref.lmm.verdict];
+    tiles.push(tile("Movements in sleep", sm.per_h, " /h", `sleep-lab definition: ≤45 s, inside the estimated sleep · ${sm.major} major · healthy median ${ref.lmm.median}, 95th percentile ${ref.lmm.p95}`, "sleep_movements_h")
+      .replace(/<\/div>$/, (v ? `<span class="chip ${v[0]}">${v[1]}</span>` : "") + "</div>"));
+  }
   if (R.baseline && R.baseline.learning) tiles.push(tile("Your baseline", `${R.baseline.nights}/${R.baseline.needed}`, " nights", "Learning what is normal for you. Each tile will say whether a night is typical once there are enough full nights.", null));
   $("tiles").innerHTML = tiles.join("");
 
@@ -490,7 +497,8 @@ function renderInsights() {
   $("belowTable").querySelector("tbody").innerHTML = Object.keys(tb).sort((a, b) => b - a).map(thr =>
     `<tr><td>below ${thr} %</td><td>${hms(tb[thr].seconds)}</td><td>${tb[thr].pct.toFixed(2)}%</td></tr>`).join("");
   const names = { valid: "Valid data", desaturation: "Oxygen drop (desaturation)", hypoxic_burden: "Hypoxic burden", arousal_linked: "Drops with pulse surge",
-    motion_suspect: "Possibly motion", pulse_rise: "Pulse surge", sleeping_hr: "Sleeping pulse", movement: "Movement", delta_index: "Variability (delta index)",
+    motion_suspect: "Possibly motion", pulse_rise: "Pulse surge", sleeping_hr: "Sleeping pulse", movement: "Movement", sleep_movements: "Movements in sleep",
+    delta_index: "Variability (delta index)",
     pulse_response: "Pulse response to drops", episodes: "Fast / slow pulse episodes",
     sleep_estimate: "Estimated sleep window", periodicity: "Repeating drop cycles" };
   $("defs").innerHTML = Object.entries(I.definitions).map(([k, v]) => `<dt>${names[k] || k}</dt><dd>${escHtml(v)}</dd>`).join("") +
@@ -519,11 +527,20 @@ renderInsights();
 /* ---------- "how to read this chart" guides: beside each chart on wide screens, folded away below it on narrow ones ---------- */
 function renderGuides() {
   const ok = I && !I.too_short, s = ok && I.spo2, d = ok && I.desaturations, p = ok && I.pulse, m = ok && I.movement, se = ok && I.sleep_estimate;
+  const sm = m && m.in_sleep, ref = m && m.reference;
   const key = (cls, style, text) => `<li><span class="sw ${cls}" style="${style}"></span><span>${text}</span></li>`;
   const fact = (label, value) => `<span>${label}<b>${value}</b></span>`;
   const combined = R.parts && R.parts.length > 1;
   // "This night" + orientation: under the chart on wide screens (where the space is), inside the fold-out on narrow ones
   const more = (id, html) => { $(`more-${id}`).innerHTML = html; return `<div class="g-more">${html}</div>`; };
+  const referenceText = ref => {           // the published movement counts that apply to this person's sex and age
+    const who = I.profile || {}, known = who.sex || who.age != null;
+    return `Sleep-lab studies of healthy adults count a median of ${ref.lmm.median} movements per hour of sleep (middle half ${ref.lmm.iqr[0]}–${ref.lmm.iqr[1]}, 95th percentile ${ref.lmm.p95}); ` +
+      `counting every twitch, ${ref.all_movements.group === "all" ? "the median is about 11 per hour and men move about 1.8× as often as women" : `${ref.all_movements.group} average about ${ref.all_movements.median} per hour`}` +
+      (ref.position_shifts ? `; people aged ${ref.position_shifts.group} change position about ${ref.position_shifts.per_h} times an hour, which the “major movements in sleep” line roughly stands in for` : "") +
+      `. Those counts come from EMG and video in a sleep lab, so a finger sensor can only be in the neighbourhood of them` +
+      (known ? "." : ". Set your sex and birth year in <code>.env</code> to show the bands for your own age group.");
+  };
   $("guide-spo2").innerHTML = `<h5>What it shows</h5><p>Blood oxygen saturation (SpO2), one reading every 4 seconds.</p><h5>Key</h5><ul class="keys">` +
     key("", "background:linear-gradient(90deg,#2db35c,#e8863f 45%,#f53535)", "<b>Line colour follows the value</b>: green in the mid-90s and above, orange in the low 90s, red lower down. The blue area is just shading.") +
     (EVENTS.length ? key("tick", "background:#fe5000", "<b>Orange tick</b> at the top: an oxygen drop of 3 % or more that was followed by a pulse surge – most likely a real event that disturbed your sleep.") +
@@ -545,8 +562,10 @@ function renderGuides() {
   $("guide-motion").innerHTML = `<h5>What it shows</h5><p>How much the ring moved in each 4-second slot. The 0–200 scale is the ring's own and is not calibrated – read it as “how vigorous”, not as a measurement.</p><h5>Key</h5><ul class="keys">` +
     key("tick", "background:#34c759;height:16px;margin-top:0", "<b>Single spikes</b>: turning over or shifting a hand. <b>Clusters</b> of spikes: a restless spell or time awake.") +
     key("", "background:#343c4a;outline:1px solid #5b6670", "<b>Flat stretches</b>: lying still – usually your deepest, most settled sleep.") + `</ul>` + more("motion",
-    (m ? `<div><h5>This night</h5><div class="night">${I.short ? "" : fact("Movement bouts per hour", m.bouts_per_h)}${fact("Major movements (≥30 s)", m.major_movements)}${fact("Longest still period", `${m.longest_still_min} min`)}${se && se.found && !I.short ? fact("Restless / wake-like (estimate)", `${se.wake_like_min} min`) : ""}</div></div>` : "") +
-    `<div><h5>For orientation</h5><p>Everyone moves many times a night. Look for movement that lines up with oxygen drops and pulse surges above – that combination is a breathing event ending in a brief arousal. Movement on its own is just movement.</p></div>`);
+    (m ? `<div><h5>This night</h5><div class="night">${I.short ? "" : fact("Movement bouts per recording hour", m.bouts_per_h)}${fact("Major movements (≥30 s)", m.major_movements)}${fact("Longest still period", `${m.longest_still_min} min`)}${se && se.found && !I.short ? fact("Restless / wake-like (estimate)", `${se.wake_like_min} min`) : ""}` +
+      (sm && !I.short ? fact("Movements in sleep per hour (sleep-lab definition)", `${sm.per_h} over ${sm.hours} h`) + fact("Major movements in sleep per hour", sm.major_per_h) : "") + `</div></div>` : "") +
+    `<div><h5>For orientation</h5><p>Everyone moves many times a night. Look for movement that lines up with oxygen drops and pulse surges above – that combination is a breathing event ending in a brief arousal. Movement on its own is just movement.</p>` +
+    (ref ? `<p>${referenceText(ref)}</p>` : "") + `</div>`);
 
   // open beside the chart on wide screens, folded away on narrow ones (unless the reader opened it)
   const wide = matchMedia("(min-width: 1080px)"), guides = [...document.querySelectorAll(".guide")];
